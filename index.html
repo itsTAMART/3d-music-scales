@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<!--[if IE 9]>         <html class="ie9" lang="en"> <![endif]-->
+<!--[if gt IE 9]><!--> <html lang="en"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+
+        <title>Music Scales in 3D</title>
+
+        <meta name="description" content="A futuristic dashboard by pixelcave. You can download it from https://pixelcave.com">
+        <meta name="author" content="pixelcave">
+        <meta name="robots" content="noindex, nofollow">
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1.0">
+
+        <!-- Favicons (just the basics for now, check out http://realfavicongenerator.net/ for all available) -->
+        <link rel="shortcut icon" href="assets/img/favicon.png">
+        <link rel="icon" type="image/png" href="assets/img/favicon.png" sizes="32x32">
+
+        <!-- Web fonts -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway:200,300,400,600,700&Open+Sans:300,400,600,700">
+
+        <!-- Bootstrap and Ares CSS -->
+        <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+        <link rel="stylesheet" href="assets/css/animate.min.css">
+        <link rel="stylesheet" href="assets/css/ares.css">
+
+        <!-- Graph Library Script -->
+        <script src="//unpkg.com/three"></script>
+		<script src="//unpkg.com/three-spritetext"></script>
+
+        <script src="//unpkg.com/3d-force-graph"></script>
+<!--         <script src="../../dist/3d-force-graph.js"></script> -->
+
+        <!-- Style for the graph -->
+        <style>
+            .3d-graph {z-index: -9999; margin: 0;}
+        </style>
+
+
+    </head>
+    <body>
+        <!-- Page Container -->
+        <!--
+            Available Classes: 'modern-sf', 'vintage-sf', 'interstellar-sf'
+        -->
+        <div id="page-container" class="modern-sf">
+
+
+
+           
+
+
+
+            <!-- Main Content -->
+            <main id="page-main">
+
+                                        <!-- Music Graph -->
+                <div id="3d-graph" style="z-index : 0;
+                    position: absolute;
+                    top : 0;
+                    left    : 0;
+                    width   : 100%;
+                    height  : 100%;
+                    margin  : 0;
+                    padding : 0;"> </div>
+
+
+            <!-- Header -->
+            <header id="page-header">
+                <div class="h3 text-right pull-right hidden-xs">
+                    <div class="text-success animated infinite pulse pull-right" href="https://itstamart.github.io/blog/3d-music-scales/">[BLOG]</div>
+                </div>
+                <h1 class="h3 font-w200">
+                    <span class="text-crystal">//</span> <a class="link-sf font-w300" href="index.html">MUSIC SCALES IN 3D</a>
+                </h1>
+            </header>
+            <!-- END Header -->
+
+                <!-- Columns -->
+                <div class="row">
+                    <!-- Animated Circles Column -->
+                    <div class="col-lg-6 col-lg-push-3 overflow-hidden push-20" >
+
+                    </div>
+                    <!-- END Animated Circles Column -->
+
+                    <!-- Left Column -->
+                    <div class="col-sm-6 col-lg-3 col-lg-pull-6">
+                        <!-- Environment -->
+                        <div class="block">
+                            <div class="block-header overflow-hidden">
+                                <h2 class="block-title visibility-hidden" data-toggle="appear" data-class="animated fadeInDown">THIS SCALE</h2>
+                            </div>
+                            <div class="block-content">
+                                <div class="row items-push overflow-hidden">
+<!--                                     <div class="col-xs-4 text-center visibility-hidden" data-toggle="appear" data-class="animated fadeInLeft" data-timeout="100">
+                                        <div class="js-pie-chart pie-chart" data-percent="50" data-line-width="5" data-size="65" data-bar-color="rgba(255, 255, 255, .2)" data-track-color="rgba(255, 255, 255, .1)">
+                                            <span class="font-s16 font-w600">PSI</span>
+                                        </div>
+                                    </div> -->
+                                    <div class="col-xs-8 visibility-hidden" data-toggle="appear" data-class="animated fadeInRight" data-timeout="400">
+                                        <div id="this-scale-name" class="text-uppercase font-w600 text-white-op"></div>
+                                        <div id="this-scale-notes" class="font-s36 font-w300"></div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <!-- END Environment -->
+
+                        <!-- Planets -->
+                        <div class="block">
+                            <div class="block-header overflow-hidden">
+                                <h2 class="block-title visibility-hidden" data-toggle="appear" data-class="animated fadeInDown">RELATED SCALES</h2>
+                            </div>
+                            <div id="related-scales-container" class="block-content">
+                                
+              
+                            </div>
+                        </div>
+                        <!-- END Planets -->
+                    </div>
+                    <!-- END Left Column -->
+
+                    <!-- Right Column -->
+                    <div class="col-sm-6 col-lg-3">
+                        <!-- HQ_COMS -->
+                        <div class="block">
+                            <div class="block-header overflow-hidden">
+                                <h2 class="block-title visibility-hidden" data-toggle="appear" data-class="animated fadeInDown">
+                                RELATED CHORDS</h2>
+                            </div>
+                            <div class="block-content overflow-auto">
+                                <div id="related-chords-container" class="row items-push">
+
+                                                                                                     
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END HQ_COMS -->
+
+                        
+                    </div>
+                    <!-- END Right Column -->
+                </div>
+                <!-- END Columns -->
+
+                <!-- Page Footer -->
+<!--                 <div class="block">
+                    <div class="block-content block-content-full font-s12 text-center visibility-hidden" data-toggle="appear" data-class="animated fadeIn" data-timeout="1000">
+                        2016 &copy; Crafted with <span class="text-danger">&hearts;</span> by <a class="link-sf" href="https://pixelcave.com/">pixelcave</a>
+                    </div>
+                </div> -->
+                <!-- END Page Footer -->
+            </main>
+            <!-- END Main Content -->
+
+            
+            
+        </div>
+        <!-- END Page Container -->
+
+        <!-- Scripts -->
+        <script src="assets/js/core/jquery.min.js"></script>
+        <script src="assets/js/plugins/jquery.appear.min.js"></script>
+        <script src="assets/js/plugins/jquery.countTo.min.js"></script>
+        <script src="assets/js/plugins/jquery.easypiechart.min.js"></script>
+        <script src="assets/js/ares.js"></script>
+
+        <!-- Graph JS Code -->
+        <script>
+			var selected;
+
+			var vertices;
+			var edges;
+			var chord_links;
+
+			var thisScaleDOM = document.getElementById("this-scale-name");
+			var thisScaleNotesDOM = document.getElementById("this-scale-notes");
+			var relatedScalesDOM = document.getElementById("related-scales-container");
+			var relatedChordsDOM = document.getElementById("related-chords-container");
+
+			var relatedScaleChildList = [];
+			var relatedChordChildList = [];
+
+
+
+
+			async function getScaleJSON() {
+				const response = await fetch("datasets/only-scales.json");
+				const data = await response.json();
+
+				const response2 = await fetch("datasets/scale_dict.json");
+				const data2 = await response2.json();
+				
+				const response3 = await fetch("datasets/related_chords.json");
+				const data3 = await response3.json();
+
+				vertices = data.nodes;
+				edges = data.links;
+				note_dict = data2;
+				chord_links = data3.links;
+
+				console.log(vertices);
+				console.log(edges);
+				console.log(note_dict);
+				console.log(chord_links);
+			};
+
+			function notesInScale(scale){
+				return note_dict[scale].notes;
+			}
+
+			function relScaleDOMtemplate(scale_name){
+				/*
+				<div  class="row items-push overflow-hidden">
+	                <div class="col-xs-8 visibility-hidden" data-toggle="appear" data-class="animated fadeInRight" data-timeout="400">
+	                    <div class="text-uppercase font-w600 text-white-op">Mars</div>
+	                    <div class="font-s36 font-w300">1.67 
+	                    	<span class="font-s16 font-w400 text-crystal">L.Y.
+	                    	</span>
+	                    </div>
+	                </div>
+                </div>
+				*/
+				let div0 = document.createElement('div');
+				div0.className = "row items-push overflow-hidden";
+				let div1 = document.createElement('div', { "data-toggle":"appear",
+														   "data-class":"animated fadeInRight",
+														   "data-timeout":"400"  });
+				div1.className = "col-xs-16";
+				let div2 = document.createElement('div');
+				div2.className = "text-uppercase font-w600 text-white-op";
+				// and give it some content 
+				let text2 = document.createTextNode(scale_name[0]); 
+				// add the text node to the newly created div
+				let div3 = document.createElement('div');
+				div3.className = "font-s36 font-w300";
+				// and give it some content 
+
+				let text3 = document.createTextNode("["); 
+
+				let span3 = document.createElement('span');
+				span3.className = "text-success";
+				// and give it some content 
+				let text_span3 = document.createTextNode(notesInScale(scale_name[0])); 
+
+				let text3_1 = document.createTextNode("]"); 
+
+				let span4 = document.createElement('span');
+				span4.className = "font-s16 font-w400 text-crystal";
+				// and give it some content 
+				let text4 = document.createTextNode(scale_name[1]); 
+				div0.appendChild(div1);
+				div1.appendChild(div2);  
+				div1.appendChild(div3);
+				div2.appendChild(text2);  
+				div3.appendChild(text3);
+				div3.appendChild(span3);
+				div3.appendChild(text3_1);
+				div3.appendChild(span4);
+				span3.appendChild(text_span3);
+				span4.appendChild(text4);
+
+
+				return div0;
+			}
+
+			function relChordDOMtemplate(chord_name){
+				/*
+				<div class="col-xs-6 visibility-hidden" data-toggle="appear" data-class="animated fadeIn" data-timeout="300">
+					<div class="text-uppercase font-w600 text-white-op">Mars</div>
+                    <div class="font-s24 font-w300 text-white-op">
+	                    [
+	                    <span class="text-success">
+	                    	C,E,F 
+	                	</span>
+	                	]
+	                	<span class="font-s16 font-w400 text-crystal">
+	                	L.Y.
+	                	</span>
+                	</div>
+                </div>
+				*/
+				let div0 = document.createElement('div', { "data-toggle":"appear",
+														   "data-class":"animated fadeInRight",
+														   "data-timeout":"400"  });
+				div0.className = "col-xs-6";
+				let div1 = document.createElement('div');
+
+				div1.className = "text-uppercase font-w600 text-white-op";
+				let text1 = document.createTextNode(chord_name[0]); 
+
+				let div2 = document.createElement('div');
+				div2.className = "font-s24 font-w300 text-white-op";
+				let text2 = document.createTextNode("["); 
+
+				let span2 = document.createElement('span');
+				span2.className = "text-success";
+				// and give it some content 
+				let text_span2 = document.createTextNode(notesInScale(chord_name[0])); 
+				// and give it some content 
+				// add the text node to the newly created div
+
+				let text3 = document.createTextNode("]"); 
+				let span4 = document.createElement('span');
+				span4.className = "font-s16 font-w400 text-crystal";
+				// and give it some content 
+				let text4 = document.createTextNode(chord_name[1]); 
+				div0.appendChild(div1);
+				div0.appendChild(div2);  
+				div1.appendChild(text1);
+				div2.appendChild(text2);  
+				div2.appendChild(span2); 
+				div2.appendChild(text3);
+				div2.appendChild(span4); 
+				span2.appendChild(text_span2);
+				span4.appendChild(text4);
+				
+
+
+
+				return div0;
+			}
+
+
+			function getInfoScale(_scale) {
+
+
+				// get the scale name
+				let ownScale = vertices.find(o => o.id === _scale);
+				console.log(ownScale);
+
+				let linkNames;
+				// get the links of the scale
+				let ownLinks = edges.filter(o => (o.source === _scale || o.target === _scale ));
+
+				let chordLinks = chord_links.filter(o => ((o.source === _scale || o.target === _scale ) ));
+
+
+				// sort by the closeness of the links
+				ownLinks = ownLinks.sort(function(a, b){return a.value-b.value});
+				console.log(ownLinks);
+
+								// sort by the closeness of the links
+				chordLinks = chordLinks.sort(function(a, b){return a.value-b.value});
+				console.log(chordLinks);
+
+				// get the names of the related scales
+				let relatedScaleNames = [];
+				function getLinkName(link){
+					relatedScaleNames.push( (ownScale.id === link.source) ? ([link.target, link.value]) : ([link.source, link.value]) );
+				};
+				ownLinks.forEach(getLinkName);
+				console.log('relatedScaleNames');
+				console.log(relatedScaleNames);
+
+				// modify the information in base on this scale scale 
+				thisScaleDOM.innerHTML = ownScale.id;
+				thisScaleNotesDOM.innerHTML = notesInScale(ownScale.id);
+
+				// modify the related scales DOM's first remove then add
+				for(child in relatedScaleChildList){
+					relatedScalesDOM.removeChild(relatedScaleChildList[child]);
+				};
+				relatedScaleChildList = [];
+
+
+				let relatedChordNames = [];
+				function getChordName(link){
+					relatedChordNames.push( (ownScale.id === link.source) ? ([link.target, link.value]) : ([link.source, link.value]) );
+				};
+
+				chordLinks.forEach(getChordName);
+				//relatedChordNames = relatedChordNames.filter(i => relatedScaleNames.includes(i));
+				
+
+				console.log('relatedChordNames');
+				console.log(relatedChordNames);
+
+				for(i in relatedScaleNames){
+					//console.log(relatedChordNames[i]);
+					obj = relScaleDOMtemplate(relatedScaleNames[i]);
+					relatedScaleChildList.push(obj);
+					relatedScalesDOM.appendChild(obj);
+				};
+
+
+
+				// modify the related chords DOM's first remove then add
+				for(child in relatedChordChildList){
+					relatedChordsDOM.removeChild(relatedChordChildList[child]);
+				};
+				relatedChordChildList = [];
+				// TODO change here right now it is done with scales instead of chords
+				for(i in relatedChordNames){
+					//console.log(relatedChordNames[i]);
+					obj = relChordDOMtemplate(relatedChordNames[i]);
+					relatedChordChildList.push(obj);
+					relatedChordsDOM.appendChild(obj);
+				};
+
+
+			};
+
+
+			getScaleJSON();
+
+
+            const elem = document.getElementById('3d-graph');
+
+            const Graph = ForceGraph3D()
+              (elem)
+                .jsonUrl('datasets/only-scales.json')
+                .nodeLabel('id')
+                .nodeAutoColorBy('group')
+                .nodeThreeObject(node => {
+			          // use a sphere as a drag handle
+			          const obj = new THREE.Mesh(
+			            new THREE.SphereGeometry(10),
+			            new THREE.MeshBasicMaterial({ depthWrite: false, transparent: true, opacity: 0 })
+			          );
+
+			          // add text sprite as child
+			          const sprite = new SpriteText(node.id);
+			          sprite.color = node.color;
+			          sprite.textHeight = 4;
+			          obj.add(sprite);
+
+			          return obj;
+	        	})
+                .linkAutoColorBy('distance')
+                .onNodeHover(node => elem.style.cursor = node ? 'pointer' : null)
+                .onNodeClick(node => {
+                  // Aim at node from outside it
+                  const distance = 40;
+                  const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+
+                  selected = node.id;
+                  getInfoScale(selected);
+
+                  Graph.cameraPosition(
+                    { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                    node, // lookAt ({ x, y, z })
+                    3000  // ms transition duration
+                  );
+
+
+                });
+                
+
+            jQuery(function(){
+                // Init page helpers (Appear + CountTo + Easy Pie Chart plugins)
+                Ares.initHelpers(['appear', 'appear-countTo', 'easy-pie-chart']);
+            });
+        </script>
+    </body>
+</html>
