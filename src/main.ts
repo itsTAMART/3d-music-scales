@@ -10,11 +10,12 @@
 
 import { loadAppData } from "./data/loader";
 import { createLayout } from "./ui/layout";
-import { createGraph, type GraphInstance } from "./graph/graph";
+import { createGraph, resetCamera, type GraphInstance } from "./graph/graph";
 import { updateHighlights, clearHighlights } from "./graph/highlight";
 import { updateScalePanel } from "./ui/scale-panel";
 import { updateChordPanel } from "./ui/chord-panel";
 import { createPiano, highlightPianoKey, clearPianoHighlights } from "./piano/piano";
+import { initKeyboardBindings } from "./piano/keyboard-bindings";
 import { createMIDIButton } from "./audio/midi-input";
 import { createAudioControls } from "./audio/audio-analyzer";
 import { matchScales, normalizeNote } from "./music/note-utils";
@@ -52,8 +53,12 @@ function init(): void {
     }
   );
 
-  // Initialize piano keyboard
+  // Initialize piano keyboard + keyboard bindings
   const pianoSvg = createPiano(elements.bottomPanel);
+  initKeyboardBindings();
+
+  // Reset camera button
+  createResetCameraButton(elements.controlsEl, graph);
 
   // Initialize MIDI controls
   createMIDIButton(elements.controlsEl);
@@ -102,6 +107,28 @@ function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
   );
 
   updateHighlights(graph, highlightIds);
+}
+
+/** Creates a "Reset Camera" button in the controls panel. */
+function createResetCameraButton(
+  container: HTMLElement,
+  graph: GraphInstance
+): void {
+  const wrapper = document.createElement("div");
+  wrapper.className = "midi-controls"; // reuse the flex layout style
+
+  const button = document.createElement("button");
+  button.className = "midi-button";
+  button.textContent = "Reset Camera";
+  button.addEventListener("click", () => resetCamera(graph));
+
+  const hint = document.createElement("div");
+  hint.className = "midi-status";
+  hint.textContent = "Orbit: drag · Zoom: scroll · Pan: right-drag";
+
+  wrapper.appendChild(button);
+  wrapper.appendChild(hint);
+  container.appendChild(wrapper);
 }
 
 // Run when DOM is ready

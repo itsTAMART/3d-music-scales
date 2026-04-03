@@ -3,7 +3,8 @@
  *
  * Wraps the 3d-force-graph library, configuring node rendering (spheres
  * with text labels), link coloring, camera animation on click, and
- * hover interactions.
+ * hover interactions. Uses OrbitControls for stable camera navigation
+ * with zoom limits.
  *
  * @module graph/graph
  *
@@ -15,10 +16,11 @@
  */
 
 import ForceGraph3D from "3d-force-graph";
-import type { ForceGraph3DInstance } from "3d-force-graph";
+import type { ForceGraph3DInstance, ConfigOptions } from "3d-force-graph";
 import type { NodeObject } from "three-forcegraph";
 import SpriteText from "three-spritetext";
 import { Mesh, SphereGeometry, MeshBasicMaterial } from "three";
+import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { GraphData } from "../types";
 
 /** Callback type for when a graph node is clicked. */
@@ -29,6 +31,7 @@ export type GraphInstance = ForceGraph3DInstance;
 
 /**
  * Creates and initializes the 3D force graph in the given container.
+ * Uses OrbitControls for stable camera navigation with zoom limits.
  *
  * @param container - The DOM element to render the graph into.
  * @param data - The graph data (nodes and links).
@@ -40,7 +43,9 @@ export function createGraph(
   data: GraphData,
   onNodeClick: NodeClickHandler
 ): GraphInstance {
-  const graph = new ForceGraph3D(container)
+  const config: ConfigOptions = { controlType: "orbit" };
+
+  const graph = new ForceGraph3D(container, config)
     .graphData(data)
     .nodeLabel("id")
     .nodeAutoColorBy("group")
@@ -95,5 +100,38 @@ export function createGraph(
     })
     .backgroundColor("rgba(0, 0, 0, 0)");
 
+  // Configure OrbitControls zoom limits after initialization
+  setupCameraControls(graph);
+
   return graph;
+}
+
+/**
+ * Resets the camera to show all nodes (zoom-to-fit).
+ */
+export function resetCamera(graph: GraphInstance): void {
+  graph.zoomToFit(1000, 50);
+}
+
+/**
+ * Configures OrbitControls with zoom limits and damping.
+ */
+function setupCameraControls(graph: GraphInstance): void {
+  // Controls are available after the first render tick
+  setTimeout(() => {
+    const controls = graph.controls() as OrbitControls;
+    if (controls) {
+      // Zoom limits: don't let the user zoom too far in or out
+      controls.minDistance = 50;
+      controls.maxDistance = 800;
+
+      // Smooth damping for more pleasant navigation
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.1;
+
+      // Limit vertical rotation to avoid flipping
+      controls.minPolarAngle = 0.2;   // ~11° from top
+      controls.maxPolarAngle = Math.PI - 0.2; // ~169° from top
+    }
+  }, 500);
 }
