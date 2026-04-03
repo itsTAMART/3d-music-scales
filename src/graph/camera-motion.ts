@@ -31,7 +31,7 @@ const PAUSE_DURATION_MS = 8000;
 const ORBIT_SPEED = (2 * Math.PI) / 90;
 
 /** Idle orbit radius — distance from center. */
-const ORBIT_RADIUS = 350;
+const ORBIT_RADIUS = 450;
 
 /** Idle orbit: slight vertical oscillation amplitude. */
 const ORBIT_Y_AMPLITUDE = 50;
