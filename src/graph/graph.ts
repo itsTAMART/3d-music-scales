@@ -144,7 +144,7 @@ export function createGraph(
 
       onNodeClick((node.id as string) ?? "");
     })
-    .backgroundColor("#030810");
+    .backgroundColor("rgba(0,0,0,0)");
 
   // Spread the graph wider
   graph.d3Force("charge")?.strength(-120);
@@ -159,7 +159,7 @@ export function createGraph(
     if (node.z == null) node.z = (Math.random() - 0.5) * 200;
   }
 
-  // Warm up the force simulation so nodes are spread by first render
+  // Warm up the simulation so nodes are spread by first render
   graph.d3ReheatSimulation();
 
   // Distance-based label fading
@@ -226,24 +226,31 @@ function setupCameraControls(graph: GraphInstance): void {
 
 /**
  * Adds UnrealBloomPass to the graph's post-processing pipeline.
- * Makes bright star cores naturally bleed light into surrounding pixels,
- * creating a physically-realistic glow at any zoom level.
+ * Waits for the renderer to be fully initialized before adding.
  */
 function setupBloom(graph: GraphInstance): void {
+  // Wait for the graph to fully initialize and render at least once
   setTimeout(() => {
-    const composer = graph.postProcessingComposer();
-    if (!composer) return;
+    try {
+      const composer = graph.postProcessingComposer();
+      const renderer = graph.renderer();
+      if (!composer || !renderer) return;
 
-    const renderer = graph.renderer();
-    const bloomPass = new UnrealBloomPass(
-      new Vector2(renderer.domElement.width, renderer.domElement.height),
-      1.2,   // strength — how much glow
-      0.6,   // radius — how far the glow spreads
-      0.15   // threshold — brightness cutoff (low = more things glow)
-    );
+      const width = renderer.domElement.clientWidth || window.innerWidth;
+      const height = renderer.domElement.clientHeight || window.innerHeight;
 
-    composer.addPass(bloomPass);
-  }, 200);
+      const bloomPass = new UnrealBloomPass(
+        new Vector2(width, height),
+        1.0,   // strength
+        0.5,   // radius
+        0.2    // threshold
+      );
+
+      composer.addPass(bloomPass);
+    } catch {
+      // Silently fail — bloom is cosmetic, not critical
+    }
+  }, 1000);
 }
 
 /**
