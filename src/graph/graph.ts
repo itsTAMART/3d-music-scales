@@ -100,6 +100,16 @@ export function createGraph(
     })
     .backgroundColor("rgba(0, 0, 0, 0)");
 
+  // Double-click background to reset camera
+  let lastBgClick = 0;
+  graph.onBackgroundClick(() => {
+    const now = Date.now();
+    if (now - lastBgClick < 400) {
+      resetCamera(graph);
+    }
+    lastBgClick = now;
+  });
+
   // Configure OrbitControls zoom limits after initialization
   setupCameraControls(graph);
 

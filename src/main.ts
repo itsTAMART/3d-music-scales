@@ -2,8 +2,8 @@
  * Application entry point — initializes all modules and wires them together.
  *
  * Loads data, creates the DOM layout, initializes the 3D graph,
- * sets up the piano keyboard, and connects the note event pipeline
- * for scale highlighting.
+ * sets up the piano keyboard with sound synthesis, and connects
+ * the note event pipeline for scale highlighting with fade decay.
  *
  * @module main
  */
@@ -11,11 +11,20 @@
 import { loadAppData } from "./data/loader";
 import { createLayout } from "./ui/layout";
 import { createGraph, resetCamera, type GraphInstance } from "./graph/graph";
-import { updateHighlights, clearHighlights } from "./graph/highlight";
+import {
+  triggerHighlights,
+  clearHighlights,
+  startHighlightLoop,
+} from "./graph/highlight";
 import { updateScalePanel } from "./ui/scale-panel";
 import { updateChordPanel } from "./ui/chord-panel";
-import { createPiano, highlightPianoKey, clearPianoHighlights } from "./piano/piano";
+import {
+  createPiano,
+  highlightPianoKey,
+  clearPianoHighlights,
+} from "./piano/piano";
 import { initKeyboardBindings } from "./piano/keyboard-bindings";
+import { noteOn, noteOff } from "./piano/synth";
 import { createMIDIButton } from "./audio/midi-input";
 import { createAudioControls } from "./audio/audio-analyzer";
 import { matchScales, normalizeNote } from "./music/note-utils";
@@ -53,6 +62,9 @@ function init(): void {
     }
   );
 
+  // Start the highlight fade animation loop
+  startHighlightLoop(graph);
+
   // Initialize piano keyboard + keyboard bindings
   const pianoSvg = createPiano(elements.bottomPanel);
   initKeyboardBindings();
@@ -67,24 +79,36 @@ function init(): void {
   createAudioControls(elements.controlsEl);
 
   // Wire up note events from all sources (piano, MIDI, audio)
-  document.addEventListener("piano:noteon", ((e: CustomEvent<NoteEventDetail>) => {
+  document.addEventListener("piano:noteon", ((
+    e: CustomEvent<NoteEventDetail>
+  ) => {
     const note = normalizeNote(e.detail.note);
     if (!note) return;
 
     activeNotes.add(note);
     highlightPianoKey(pianoSvg, note, true);
+
+    // Play sound
+    noteOn(note);
+
+    // Trigger highlight with fade
     updateNoteHighlights(graph, data);
   }) as EventListener);
 
-  document.addEventListener("piano:noteoff", ((e: CustomEvent<NoteEventDetail>) => {
+  document.addEventListener("piano:noteoff", ((
+    e: CustomEvent<NoteEventDetail>
+  ) => {
     const note = normalizeNote(e.detail.note);
     if (!note) return;
 
     activeNotes.delete(note);
     highlightPianoKey(pianoSvg, note, false);
 
+    // Release sound
+    noteOff(note);
+
     if (activeNotes.size === 0) {
-      clearHighlights(graph);
+      // Let the fade animation handle the visual decay — don't clear instantly
       clearPianoHighlights(pianoSvg);
     } else {
       updateNoteHighlights(graph, data);
@@ -93,20 +117,17 @@ function init(): void {
 }
 
 /**
- * Matches active notes against scales and updates graph highlighting.
+ * Matches active notes against scales and triggers highlight with fade.
  */
 function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
   const matches = matchScales(activeNotes, data.scaleDict);
 
-  // Highlight scales where ALL active notes match (score === 1)
-  // and scales with high partial matches (score >= 0.5)
+  // Highlight scales with high match scores (>= 0.5)
   const highlightIds = new Set(
-    matches
-      .filter((m) => m.score >= 0.5)
-      .map((m) => m.scaleId)
+    matches.filter((m) => m.score >= 0.5).map((m) => m.scaleId)
   );
 
-  updateHighlights(graph, highlightIds);
+  triggerHighlights(highlightIds);
 }
 
 /** Creates a "Reset Camera" button in the controls panel. */
@@ -115,7 +136,7 @@ function createResetCameraButton(
   graph: GraphInstance
 ): void {
   const wrapper = document.createElement("div");
-  wrapper.className = "midi-controls"; // reuse the flex layout style
+  wrapper.className = "midi-controls";
 
   const button = document.createElement("button");
   button.className = "midi-button";
@@ -124,7 +145,7 @@ function createResetCameraButton(
 
   const hint = document.createElement("div");
   hint.className = "midi-status";
-  hint.textContent = "Orbit: drag · Zoom: scroll · Pan: right-drag";
+  hint.textContent = "Double-click background to reset · Scroll to zoom";
 
   wrapper.appendChild(button);
   wrapper.appendChild(hint);
