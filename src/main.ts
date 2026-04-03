@@ -16,6 +16,7 @@ import { updateScalePanel } from "./ui/scale-panel";
 import { updateChordPanel } from "./ui/chord-panel";
 import { createPiano, highlightPianoKey, clearPianoHighlights } from "./piano/piano";
 import { createMIDIButton } from "./audio/midi-input";
+import { createAudioControls } from "./audio/audio-analyzer";
 import { matchScales, normalizeNote } from "./music/note-utils";
 import type { AppData, NoteName, NoteEventDetail } from "./types";
 
@@ -56,6 +57,9 @@ function init(): void {
 
   // Initialize MIDI controls
   createMIDIButton(elements.controlsEl);
+
+  // Initialize audio upload + analysis controls
+  createAudioControls(elements.controlsEl);
 
   // Wire up note events from all sources (piano, MIDI, audio)
   document.addEventListener("piano:noteon", ((e: CustomEvent<NoteEventDetail>) => {
