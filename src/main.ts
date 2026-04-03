@@ -11,6 +11,7 @@
 import { loadAppData } from "./data/loader";
 import { createLayout } from "./ui/layout";
 import { createGraph, resetCamera, type GraphInstance } from "./graph/graph";
+import { initCameraMotion, notifyNodeClick } from "./graph/camera-motion";
 import {
   triggerHighlights,
   clearHighlights,
@@ -53,6 +54,7 @@ function init(): void {
     elements.graphContainer,
     data.scaleGraph,
     (scaleId: string) => {
+      notifyNodeClick(); // pause auto-camera
       updateScalePanel(scaleId, data, {
         scaleNameEl: elements.scaleNameEl,
         scaleNotesEl: elements.scaleNotesEl,
@@ -64,6 +66,9 @@ function init(): void {
 
   // Start the highlight fade animation loop
   startHighlightLoop(graph);
+
+  // Start cinematic auto-camera (idle orbit + music tracking)
+  initCameraMotion(graph, elements.graphContainer);
 
   // Initialize piano keyboard + keyboard bindings
   const pianoSvg = createPiano(elements.bottomPanel);
@@ -145,11 +150,14 @@ function createResetCameraButton(
   const button = document.createElement("button");
   button.className = "midi-button";
   button.textContent = "Reset Camera";
-  button.addEventListener("click", () => resetCamera(graph));
+  button.addEventListener("click", () => {
+    notifyNodeClick(); // pause auto-camera
+    resetCamera(graph);
+  });
 
   const hint = document.createElement("div");
   hint.className = "midi-status";
-  hint.textContent = "Double-click background to reset · Scroll to zoom";
+  hint.textContent = "Auto-orbits when idle · Follows music when playing";
 
   wrapper.appendChild(button);
   wrapper.appendChild(hint);

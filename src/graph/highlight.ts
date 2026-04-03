@@ -119,6 +119,20 @@ export function getHighlightedNodes(): ReadonlySet<string> {
   return result;
 }
 
+/**
+ * Returns a map of node ID → brightness for all currently glowing nodes.
+ * Used by the camera motion module to compute the weighted focus point.
+ */
+export function getNodeBrightness(): ReadonlyMap<string, number> {
+  const result = new Map<string, number>();
+  for (const [id, state] of nodeStates) {
+    if (state.brightness > BRIGHTNESS_THRESHOLD) {
+      result.set(id, state.brightness);
+    }
+  }
+  return result;
+}
+
 /** Animation loop — decays brightness and applies visuals each frame. */
 function animationTick(timestamp: number): void {
   if (!loopRunning || !graphRef) return;
