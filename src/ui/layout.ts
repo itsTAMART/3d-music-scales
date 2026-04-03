@@ -37,9 +37,9 @@ export function createLayout(root: HTMLElement): LayoutElements {
   const graphContainer = createElement("div", { id: "graph-container" });
   root.appendChild(graphContainer);
 
-  // Header
+  // Header — spaceship bridge targeting display
   const header = createElement("div", { id: "header" });
-  header.innerHTML = `<h1><span class="accent">//</span> MUSIC SCALES IN 3D</h1>`;
+  header.innerHTML = `<h1><span class="accent">&laquo;</span> MUSIC SCALES IN 3D <span class="accent">&raquo;</span></h1>`;
   root.appendChild(header);
 
   // Left panel

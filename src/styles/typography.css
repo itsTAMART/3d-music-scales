@@ -1,41 +1,29 @@
 /**
- * Typography styles — font sizes, weights, and utility classes.
+ * Typography styles — space-HUD aesthetic with monospace accents.
  */
 
-.text-accent {
-  color: var(--color-accent);
-}
-
-.text-success {
-  color: var(--color-success);
-}
-
-.text-dim {
-  color: var(--color-text-dim);
-}
-
-.text-highlight {
-  color: var(--color-highlight);
-}
-
-.font-heading {
-  font-family: var(--font-heading);
-}
-
-.font-light {
-  font-weight: 300;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
+.text-accent { color: var(--color-accent); }
+.text-success { color: var(--color-success); }
+.text-dim { color: var(--color-text-dim); }
+.text-highlight { color: var(--color-highlight); }
+.font-heading { font-family: var(--font-heading); }
+.font-mono { font-family: var(--font-mono); }
+.font-light { font-weight: 300; }
+.font-semibold { font-weight: 600; }
 
 a {
   color: var(--color-accent);
   text-decoration: none;
-  transition: color 0.15s;
+  transition: color 0.2s, text-shadow 0.2s;
 }
 
 a:hover {
-  color: var(--color-text);
+  color: var(--color-text-bright);
+  text-shadow: 0 0 8px var(--color-accent-dim);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(80, 180, 255, 0.25);
+  color: var(--color-text-bright);
 }

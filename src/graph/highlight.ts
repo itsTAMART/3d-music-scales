@@ -174,26 +174,69 @@ function applyVisuals(graph: GraphInstance): void {
       material?: { opacity: number };
       color?: string;
     } | undefined;
-    if (!sprite) continue;
+    // Star core mesh (small bright sphere)
+    const core = userData?.core as {
+      material?: { opacity: number; color?: { setStyle: (c: string) => void } };
+      scale?: { setScalar: (s: number) => void };
+    } | undefined;
+    // Glow sprite (additive halo)
+    const glow = userData?.glow as {
+      material?: { opacity: number; color?: { setStyle: (c: string) => void } };
+      scale?: { set: (x: number, y: number, z: number) => void };
+    } | undefined;
 
     const nodeId = String(node.id ?? "");
-    const originalColor = (userData.originalColor as string) ?? "#ffffff";
+    const originalColor = (userData?.originalColor as string) ?? "#ffffff";
     const state = nodeStates.get(nodeId);
 
     if (state && state.brightness > BRIGHTNESS_THRESHOLD) {
-      // Highlighted: interpolate toward white based on brightness
-      sprite.color = lerpColor(originalColor, "#ffffff", state.brightness);
-      if (sprite.material) {
-        sprite.material.opacity = 0.3 + 0.7 * state.brightness;
+      const b = state.brightness;
+      // Highlighted: text brightens toward white
+      if (sprite) {
+        sprite.color = lerpColor(originalColor, "#ffffff", b);
+        if (sprite.material) sprite.material.opacity = 0.4 + 0.6 * b;
+      }
+      // Core pulses brighter and slightly larger
+      if (core) {
+        if (core.material) core.material.opacity = 0.8 + 0.2 * b;
+        if (core.scale) core.scale.setScalar(1 + b * 0.8);
+        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", b * 0.7));
+      }
+      // Glow expands and brightens
+      if (glow) {
+        const glowSize = 14 + b * 16;
+        if (glow.scale) glow.scale.set(glowSize, glowSize, 1);
+        if (glow.material) glow.material.opacity = 0.35 + b * 0.5;
       }
     } else if (anyHighlighted) {
       // Dimmed: other nodes while some are highlighted
-      sprite.color = originalColor;
-      if (sprite.material) sprite.material.opacity = 0.15;
+      if (sprite) {
+        sprite.color = originalColor;
+        if (sprite.material) sprite.material.opacity = 0.12;
+      }
+      if (core) {
+        if (core.material) core.material.opacity = 0.25;
+        if (core.scale) core.scale.setScalar(0.6);
+      }
+      if (glow) {
+        if (glow.material) glow.material.opacity = 0.05;
+        if (glow.scale) glow.scale.set(8, 8, 1);
+      }
     } else {
       // Default: no highlights active
-      sprite.color = originalColor;
-      if (sprite.material) sprite.material.opacity = 1;
+      if (sprite) {
+        sprite.color = originalColor;
+        if (sprite.material) sprite.material.opacity = 1;
+      }
+      if (core) {
+        if (core.material) core.material.opacity = 0.9;
+        if (core.scale) core.scale.setScalar(1);
+        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", 0.5));
+      }
+      if (glow) {
+        if (glow.material) glow.material.opacity = 0.35;
+        if (glow.scale) glow.scale.set(14, 14, 1);
+      }
     }
   }
 }

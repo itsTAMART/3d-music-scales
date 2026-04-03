@@ -1,19 +1,19 @@
 /**
- * Piano keyboard styles — key colors, highlights, and animations.
+ * Piano keyboard styles — holographic space-HUD aesthetic.
  */
 
 .piano-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 1rem 1rem;
+  padding: 0 1rem 0.75rem;
   background: linear-gradient(
     to top,
-    rgba(10, 14, 23, 0.95),
-    rgba(10, 14, 23, 0.6)
+    rgba(3, 8, 16, 0.95),
+    rgba(3, 8, 16, 0.4) 70%,
+    transparent
   );
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(80, 180, 255, 0.08);
 }
 
 /* Note histogram — sits above the piano */
@@ -23,7 +23,7 @@
   justify-content: center;
   max-width: 800px;
   width: 100%;
-  height: 60px;
+  height: 50px;
   padding: 0 0 2px;
   gap: 1px;
 }
@@ -37,39 +37,37 @@
   height: 100%;
 }
 
-.histogram-column--white {
-  flex: 1.2;
-}
-
-.histogram-column--black {
-  flex: 0.8;
-}
+.histogram-column--white { flex: 1.2; }
+.histogram-column--black { flex: 0.8; }
 
 .histogram-bar {
   width: 80%;
   min-width: 4px;
-  border-radius: 2px 2px 0 0;
+  border-radius: 1px 1px 0 0;
   transition: height 0.08s ease-out;
 }
 
 .histogram-column--white .histogram-bar {
-  background: var(--color-accent, #62d0f0);
+  background: linear-gradient(to top, rgba(77, 184, 255, 0.6), rgba(77, 184, 255, 0.9));
+  box-shadow: 0 0 6px rgba(77, 184, 255, 0.3);
 }
 
 .histogram-column--black .histogram-bar {
-  background: var(--color-success, #2ecc71);
+  background: linear-gradient(to top, rgba(0, 230, 138, 0.5), rgba(0, 230, 138, 0.8));
+  box-shadow: 0 0 6px rgba(0, 230, 138, 0.25);
 }
 
 .histogram-label {
-  font-family: var(--font-heading, sans-serif);
-  font-size: 0.5rem;
-  font-weight: 600;
-  color: var(--color-text-dim, rgba(255,255,255,0.5));
+  font-family: var(--font-mono, monospace);
+  font-size: 0.45rem;
+  font-weight: 400;
+  color: rgba(160, 200, 240, 0.35);
   letter-spacing: 0.02em;
-  padding-top: 1px;
+  padding-top: 2px;
   white-space: nowrap;
 }
 
+/* Piano keyboard */
 .piano-keyboard {
   max-width: 800px;
   width: 100%;
@@ -77,52 +75,57 @@
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
 }
 
-/* White keys */
+/* White keys — dark translucent with cyan edge */
 .piano-key--white {
-  fill: #e8edf2;
-  stroke: #bbb;
+  fill: rgba(20, 30, 50, 0.9);
+  stroke: rgba(80, 180, 255, 0.15);
   stroke-width: 0.5;
-  transition: fill 0.1s ease;
+  transition: fill 0.1s ease, filter 0.1s ease;
 }
 
 .piano-key--white:hover {
-  fill: #d0dae5;
+  fill: rgba(30, 45, 70, 0.9);
+  stroke: rgba(80, 180, 255, 0.25);
 }
 
 .piano-key--white.piano-key--pressed {
-  fill: #b0c4d8;
+  fill: rgba(40, 60, 100, 0.9);
+  stroke: rgba(80, 180, 255, 0.4);
 }
 
-/* Black keys */
+/* Black keys — deeper dark */
 .piano-key--black {
-  fill: #1a1a2e;
-  stroke: #333;
+  fill: rgba(5, 10, 20, 0.95);
+  stroke: rgba(80, 180, 255, 0.08);
   stroke-width: 0.5;
-  transition: fill 0.1s ease;
+  transition: fill 0.1s ease, filter 0.1s ease;
 }
 
 .piano-key--black:hover {
-  fill: #2a2a3e;
+  fill: rgba(15, 25, 45, 0.95);
 }
 
 .piano-key--black.piano-key--pressed {
-  fill: #3a3a5e;
+  fill: rgba(25, 40, 70, 0.95);
 }
 
-/* Active highlight (from MIDI, audio, or note matching) */
+/* Active highlight — holographic glow */
 .piano-key--active.piano-key--white {
-  fill: var(--color-accent, #62d0f0);
-  filter: drop-shadow(0 0 6px var(--color-accent, #62d0f0));
+  fill: rgba(77, 184, 255, 0.35);
+  stroke: rgba(77, 184, 255, 0.6);
+  filter: drop-shadow(0 0 8px rgba(77, 184, 255, 0.5));
 }
 
 .piano-key--active.piano-key--black {
-  fill: var(--color-accent, #62d0f0);
-  filter: drop-shadow(0 0 6px var(--color-accent, #62d0f0));
+  fill: rgba(77, 184, 255, 0.4);
+  stroke: rgba(77, 184, 255, 0.6);
+  filter: drop-shadow(0 0 8px rgba(77, 184, 255, 0.5));
 }
 
 /* Combined pressed + active */
 .piano-key--pressed.piano-key--active {
-  filter: drop-shadow(0 0 10px var(--color-highlight, #ffd700));
+  filter: drop-shadow(0 0 12px rgba(255, 196, 77, 0.6));
 }
