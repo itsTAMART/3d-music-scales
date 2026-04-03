@@ -1,0 +1,124 @@
+/**
+ * Panel styles — glass-card blocks for scale/chord info panels.
+ *
+ * Uses backdrop-filter for a frosted glass effect over the 3D graph.
+ */
+
+.panel-block {
+  background: var(--color-panel-bg);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  padding: var(--panel-padding);
+  margin-bottom: var(--gap);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.panel-block h2 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: 0.75rem;
+}
+
+/* Selected scale display */
+.scale-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.scale-notes {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--color-text);
+}
+
+.scale-notes .note {
+  color: var(--color-success);
+}
+
+/* Related scale/chord items */
+.related-item {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.related-item:last-child {
+  border-bottom: none;
+}
+
+.related-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.related-item .item-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.related-item .item-notes {
+  font-size: 0.95rem;
+  font-weight: 300;
+}
+
+.related-item .item-notes .note {
+  color: var(--color-success);
+}
+
+.related-item .item-distance {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  margin-left: 0.25rem;
+}
+
+/* Chord grid layout */
+.chord-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.chord-item {
+  padding: 0.4rem;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  cursor: default;
+}
+
+.chord-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.chord-item .item-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.chord-item .item-notes {
+  font-size: 0.85rem;
+  font-weight: 300;
+}
+
+.chord-item .item-notes .note {
+  color: var(--color-success);
+}
+
+/* Empty state */
+.empty-state {
+  color: var(--color-text-dim);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}

@@ -1,0 +1,41 @@
+/**
+ * Typography styles — font sizes, weights, and utility classes.
+ */
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-dim {
+  color: var(--color-text-dim);
+}
+
+.text-highlight {
+  color: var(--color-highlight);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-light {
+  font-weight: 300;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+a:hover {
+  color: var(--color-text);
+}

@@ -1,63 +1,32 @@
 {
-  "name": "3d-force-graph",
-  "version": "1.49.7",
-  "description": "UI component for a 3D force-directed graph using ThreeJS and d3-force-3d layout engine",
-  "unpkg": "dist/3d-force-graph.min.js",
-  "main": "dist/3d-force-graph.common.js",
-  "module": "dist/3d-force-graph.module.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/vasturiano/3d-force-graph.git"
-  },
-  "homepage": "https://github.com/vasturiano/3d-force-graph",
-  "keywords": [
-    "3d",
-    "force",
-    "graph",
-    "three",
-    "ngraph",
-    "webgl"
-  ],
-  "author": {
-    "name": "Vasco Asturiano",
-    "url": "http://bl.ocks.org/vasturiano"
-  },
+  "name": "3d-music-scales",
+  "version": "2.0.0",
+  "description": "Interactive 3D visualization of music scales and their harmonic relationships",
+  "author": "Daniel Tapia Martinez",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/vasturiano/3d-force-graph/issues"
-  },
+  "type": "module",
   "scripts": {
-    "build": "rimraf dist && rollup -c",
-    "dev": "rollup -c -w",
-    "minify": "terser dist/3d-force-graph.js -o dist/3d-force-graph.min.js -c -m --comments '/Version/'",
-    "build-module": "rollup -c rollup.config.module.js",
-    "prepare": "npm run build && npm run minify && npm run build-module"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "files": [
-    "dist/**/*",
-    "example/**/*"
-  ],
   "dependencies": {
-    "accessor-fn": "^1.2.2",
-    "kapsule": "^1.10.1",
-    "three": "^0.105.2",
-    "three-dragcontrols": "^0.88.2",
-    "three-forcegraph": "^1.22.1",
-    "three-render-objects": "^1.5.4"
+    "3d-force-graph": "^1.73.4",
+    "three": "^0.170.0",
+    "three-spritetext": "^1.9.5"
   },
   "devDependencies": {
-    "@babel/core": "^7.4.5",
-    "@babel/plugin-proposal-class-properties": "^7.4.4",
-    "@babel/plugin-proposal-object-rest-spread": "^7.4.4",
-    "@babel/preset-env": "^7.4.5",
-    "postcss-nested": "^4.1.2",
-    "postcss-simple-vars": "^5.0.2",
-    "rimraf": "^2.6.3",
-    "rollup": "^1.15.6",
-    "rollup-plugin-babel": "^4.3.2",
-    "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-node-resolve": "^5.0.3",
-    "rollup-plugin-postcss": "^2.0.3",
-    "terser": "^4.0.0"
-  }
+    "@types/three": "^0.183.1",
+    "jsdom": "^25.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsTAMART/3d-music-scales.git"
+  },
+  "homepage": "https://itstamart.github.io/3d-music-scales"
 }
