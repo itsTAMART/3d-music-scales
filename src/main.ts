@@ -7,7 +7,7 @@
 import { loadAppData } from "./data/loader";
 import { buildUnifiedGraph, defaultLayers, type GraphLayers } from "./data/graph-builder";
 import { createLayout } from "./ui/layout";
-import { createGraph, updateGraphData, resetCamera, type GraphInstance } from "./graph/graph";
+import { createGraph, updateGraphData, refreshLabels, resetCamera, type GraphInstance } from "./graph/graph";
 import { initCameraMotion, notifyNodeClick } from "./graph/camera-motion";
 import {
   triggerHighlights,
@@ -131,15 +131,17 @@ function init(): void {
   void rebuildGraph;
 }
 
-/** Matches active notes against scales and triggers highlights. */
+/** Matches active notes against scales/chords and triggers highlights. */
 function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
   const matches = matchScales(activeNotes, data.scaleDict);
 
+  // Require almost all played notes to be in the scale (>= 80%)
+  // This means a scale only lights up when you're actually playing it
   const highlightIds = new Set(
-    matches.filter((m) => m.score >= 0.5).map((m) => m.scaleId)
+    matches.filter((m) => m.score >= 0.8).map((m) => m.scaleId)
   );
 
-  // Also highlight the note nodes themselves
+  // Also highlight the note nodes themselves (always)
   for (const note of activeNotes) {
     highlightIds.add(`♪ ${note}`);
   }
@@ -177,7 +179,7 @@ function createLayerToggles(
 function createNotationToggle(
   container: HTMLElement,
   graph: GraphInstance,
-  data: AppData
+  _data: AppData
 ): void {
   const wrapper = document.createElement("div");
   wrapper.className = "midi-controls";
@@ -196,10 +198,9 @@ function createNotationToggle(
 
   btn.dataset.mode = "abc";
 
-  // When notation changes, rebuild graph to update note labels
+  // When notation changes, update labels in-place (no graph rebuild)
   onNotationChange(() => {
-    const graphData = buildUnifiedGraph(data, layers);
-    updateGraphData(graph, graphData);
+    refreshLabels(graph);
   });
 
   wrapper.appendChild(btn);

@@ -1,14 +1,12 @@
 /**
  * Graph data builder — combines scales, chords, and notes into a unified graph.
  *
- * Creates a merged graph where:
- * - Scale nodes (group 0–5) are the original scale data
- * - Chord nodes (group 10) come from related_chords.json
- * - Note nodes (group 20) are the 12 chromatic notes, connected to
- *   every scale that contains them
- *
- * Each node has a `nodeType` field ("scale" | "chord" | "note") for
- * rendering differentiation. Layers can be toggled on/off.
+ * Creates a merged graph with performance limits:
+ * - Scale nodes (group 0–5): all included with all inter-scale links
+ * - Chord nodes (group 10): included, but only the top N strongest
+ *   links per chord to keep the graph manageable
+ * - Note nodes (group 20): 12 chromatic notes, connected only to
+ *   scales where that note is the tonic (root) to limit link explosion
  *
  * @module data/graph-builder
  */
@@ -29,9 +27,11 @@ export interface GraphLayers {
   notes: boolean;
 }
 
+/** Max chord-scale links per chord (keep only closest). */
+const MAX_CHORD_LINKS = 3;
+
 /**
  * Builds the full unified graph data from the app data.
- * Returns all nodes and links; filtering by layer is done at render time.
  */
 export function buildUnifiedGraph(
   data: AppData,
@@ -41,7 +41,7 @@ export function buildUnifiedGraph(
   const links: ScaleLink[] = [];
   const nodeIds = new Set<string>();
 
-  // Always include scale nodes
+  // Scale nodes — always the foundation
   if (layers.scales) {
     for (const node of data.scaleGraph.nodes) {
       nodes.push({ ...node, nodeType: "scale" });
@@ -52,34 +52,55 @@ export function buildUnifiedGraph(
     }
   }
 
-  // Chord nodes
+  // Chord nodes — limit links per chord for performance
   if (layers.chords && layers.scales) {
-    for (const chord of data.chordData.nodes) {
-      nodes.push({ id: chord.id, group: 10, nodeType: "chord" });
-      nodeIds.add(chord.id);
-    }
-    // Only add chord-scale links where both endpoints exist
+    // Group chord links by chord, keep only the N closest
+    const chordLinkMap = new Map<string, Array<{ source: string; target: string; value: number }>>();
+
     for (const link of data.chordData.links) {
-      if (nodeIds.has(link.source) && nodeIds.has(link.target)) {
-        links.push({ source: link.source, target: link.target, value: link.value });
+      // Identify which side is the chord
+      const isSourceScale = nodeIds.has(link.source);
+      const isTargetScale = nodeIds.has(link.target);
+      const chordId = isSourceScale ? link.target : link.source;
+
+      if (!chordLinkMap.has(chordId)) chordLinkMap.set(chordId, []);
+      chordLinkMap.get(chordId)!.push(link);
+    }
+
+    for (const [chordId, chordLinks] of chordLinkMap) {
+      // Sort by value (closest first) and keep top N
+      chordLinks.sort((a, b) => a.value - b.value);
+      const kept = chordLinks.slice(0, MAX_CHORD_LINKS);
+
+      // Only add the chord if it has valid links
+      if (kept.some((l) => nodeIds.has(l.source) || nodeIds.has(l.target))) {
+        nodes.push({ id: chordId, group: 10, nodeType: "chord" });
+        nodeIds.add(chordId);
+
+        for (const link of kept) {
+          if (nodeIds.has(link.source) && nodeIds.has(link.target)) {
+            links.push({ source: link.source, target: link.target, value: link.value });
+          }
+        }
       }
     }
   }
 
-  // Note nodes — 12 chromatic notes connected to scales
+  // Note nodes — connect to scales where the note is the tonic
+  // This creates ~12 links per note (one per key) instead of ~50+
   if (layers.notes && layers.scales) {
     for (const note of NOTE_NAMES) {
       const noteId = `♪ ${note}`;
       nodes.push({ id: noteId, group: 20, nodeType: "note" });
       nodeIds.add(noteId);
 
-      // Connect to every scale that contains this note
       for (const [scaleId, info] of Object.entries(data.scaleDict)) {
         if (!nodeIds.has(scaleId)) continue;
 
-        const scaleNotes = info.notes.map((n) => normalizeNote(n)).filter(Boolean) as NoteName[];
-        if (scaleNotes.includes(note)) {
-          links.push({ source: noteId, target: scaleId, value: 3 });
+        const tonic = normalizeNote(info.tonic);
+        if (tonic === note) {
+          // Tonic link — strong connection
+          links.push({ source: noteId, target: scaleId, value: 2 });
         }
       }
     }

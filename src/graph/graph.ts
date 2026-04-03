@@ -56,9 +56,9 @@ const NODE_STYLES: Record<string, {
   textY: number;
   whiteMix: number;
 }> = {
-  scale: { coreSize: 0.5, glowSize: 8, glowOpacity: 0.4, textSize: 2.8, textY: 5, whiteMix: 0.6 },
-  chord: { coreSize: 0.25, glowSize: 4, glowOpacity: 0.2, textSize: 2.0, textY: 3.5, whiteMix: 0.4 },
-  note:  { coreSize: 0.8, glowSize: 12, glowOpacity: 0.6, textSize: 3.5, textY: 6, whiteMix: 0.8 },
+  scale: { coreSize: 0.7, glowSize: 10, glowOpacity: 0.5, textSize: 3.0, textY: 5.5, whiteMix: 0.6 },
+  chord: { coreSize: 0.2, glowSize: 3, glowOpacity: 0.15, textSize: 1.8, textY: 3, whiteMix: 0.3 },
+  note:  { coreSize: 0.4, glowSize: 6, glowOpacity: 0.4, textSize: 2.4, textY: 4, whiteMix: 0.7 },
 };
 
 /**
@@ -241,13 +241,36 @@ export function updateGraphData(
   graph: GraphInstance,
   data: { nodes: UnifiedNode[]; links: ScaleLink[] }
 ): void {
-  // Randomize new nodes' positions
   for (const node of data.nodes) {
     if (node.x == null) node.x = (Math.random() - 0.5) * 200;
     if (node.y == null) node.y = (Math.random() - 0.5) * 200;
     if (node.z == null) node.z = (Math.random() - 0.5) * 200;
   }
   graph.graphData(data);
+}
+
+/**
+ * Updates all node labels in-place without rebuilding the graph.
+ * Used when switching notation mode (ABC ↔ Solfège).
+ */
+export function refreshLabels(graph: GraphInstance): void {
+  const nodes = graph.graphData().nodes as NodeObject[];
+  for (const node of nodes) {
+    const threeObj = (node as Record<string, unknown>).__threeObj as Group | undefined;
+    if (!threeObj) continue;
+
+    const sprite = threeObj.userData.sprite as { text?: string } | undefined;
+    if (!sprite) continue;
+
+    const nodeType = (threeObj.userData.nodeType as string) ?? "scale";
+    const id = (node.id as string) ?? "";
+
+    if (nodeType === "note") {
+      const rawNote = id.replace("♪ ", "");
+      sprite.text = displayNote(rawNote);
+    }
+    // Scale and chord names stay as-is (they include "Major Scale" etc.)
+  }
 }
 
 /** Resets the camera to show all nodes. */
