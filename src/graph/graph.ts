@@ -1,10 +1,10 @@
 /**
  * Graph module — initializes and manages the 3D force-directed graph.
  *
- * Renders scale nodes as glowing stars with distance-based label fading.
- * Labels only appear when the camera is close to a node, making the
- * graph look like a star field from afar and a labeled constellation
- * up close. Uses OrbitControls for stable camera navigation.
+ * Renders scale nodes as glowing stars with bloom post-processing,
+ * distance-based label fading, and constellation-line links.
+ * Uses UnrealBloomPass for physically-realistic light bleed that
+ * makes stars look impressive at any zoom level.
  *
  * @module graph/graph
  */
@@ -23,8 +23,10 @@ import {
   AdditiveBlending,
   TextureLoader,
   Color,
+  Vector2,
   Vector3,
 } from "three";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { GraphData } from "../types";
 
@@ -37,17 +39,14 @@ export type GraphInstance = ForceGraph3DInstance;
 /** Shared glow texture (created once). */
 let glowTexture: ReturnType<typeof createGlowCanvas> | null = null;
 
-/** Shared spike texture for 4-point diffraction (created once). */
-let spikeTexture: ReturnType<typeof createSpikeCanvas> | null = null;
-
 /** Distance at which labels start appearing. */
 const LABEL_FADE_NEAR = 80;
 /** Distance at which labels are fully invisible. */
-const LABEL_FADE_FAR = 200;
+const LABEL_FADE_FAR = 220;
 
 /**
  * Creates and initializes the 3D force graph.
- * Stars with distance-faded labels and constellation links.
+ * Stars with bloom, distance-faded labels, and constellation links.
  */
 export function createGraph(
   container: HTMLElement,
@@ -57,11 +56,10 @@ export function createGraph(
   const config: ConfigOptions = { controlType: "orbit" };
 
   if (!glowTexture) glowTexture = createGlowCanvas();
-  if (!spikeTexture) spikeTexture = createSpikeCanvas();
 
   const graph = new ForceGraph3D(container, config)
     .graphData(data)
-    .nodeLabel("") // disable default tooltip — we use custom labels
+    .nodeLabel("")
     .nodeAutoColorBy("group")
     .nodeThreeObject((node: NodeObject) => {
       const id = (node.id as string) ?? "";
@@ -71,56 +69,42 @@ export function createGraph(
       const group = new Group();
 
       // Invisible sphere for drag/click hit area
-      const hitArea = new Mesh(
-        new SphereGeometry(8),
-        new MeshBasicMaterial({
-          depthWrite: false,
-          transparent: true,
-          opacity: 0,
-        })
+      group.add(
+        new Mesh(
+          new SphereGeometry(8),
+          new MeshBasicMaterial({
+            depthWrite: false,
+            transparent: true,
+            opacity: 0,
+          })
+        )
       );
-      group.add(hitArea);
 
-      // Star core — tiny bright point
-      const coreColor = new Color(color).lerp(new Color("#ffffff"), 0.7);
+      // Star core — small bright point (bloom makes it glow)
+      const coreColor = new Color(color).lerp(new Color("#ffffff"), 0.6);
       const core = new Mesh(
-        new SphereGeometry(0.6, 12, 12),
+        new SphereGeometry(0.5, 12, 12),
         new MeshBasicMaterial({
           color: coreColor,
-          transparent: true,
-          opacity: 1,
+          transparent: false,
         })
       );
       group.add(core);
 
-      // Soft glow halo (additive)
+      // Soft halo sprite (additive, subtle — bloom does the heavy lifting)
       const glowMat = new SpriteMaterial({
         map: glowTexture!,
         color: new Color(color),
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.4,
         blending: AdditiveBlending,
         depthWrite: false,
       });
       const glow = new Sprite(glowMat);
-      glow.scale.set(10, 10, 1);
+      glow.scale.set(8, 8, 1);
       group.add(glow);
 
-      // Diffraction spike cross (additive)
-      const spikeMat = new SpriteMaterial({
-        map: spikeTexture!,
-        color: new Color(color).lerp(new Color("#ffffff"), 0.3),
-        transparent: true,
-        opacity: 0.25,
-        blending: AdditiveBlending,
-        depthWrite: false,
-        rotation: Math.PI / 4, // 45° so spikes are ✕ shaped
-      });
-      const spike = new Sprite(spikeMat);
-      spike.scale.set(18, 18, 1);
-      group.add(spike);
-
-      // Text label — starts invisible, fades in when camera approaches
+      // Text label — invisible at distance, fades in when close
       const sprite = new SpriteText(id);
       sprite.color = color;
       sprite.textHeight = 2.8;
@@ -130,17 +114,15 @@ export function createGraph(
       sprite.material.opacity = 0;
       group.add(sprite);
 
-      // Store references
       group.userData.sprite = sprite;
       group.userData.core = core;
       group.userData.glow = glow;
-      group.userData.spike = spike;
       group.userData.nodeId = id;
       group.userData.originalColor = color;
 
       return group;
     })
-    // Constellation links
+    // Constellation links — thin, faint
     .linkColor(() => "rgba(60, 140, 220, 0.10)")
     .linkOpacity(1)
     .linkWidth(0.2)
@@ -162,24 +144,33 @@ export function createGraph(
 
       onNodeClick((node.id as string) ?? "");
     })
-    .backgroundColor("rgba(0, 0, 0, 0)");
+    .backgroundColor("#030810");
 
-  // Spread the graph wider — more space between nodes
+  // Spread the graph wider
   graph.d3Force("charge")?.strength(-120);
   graph.d3Force("link")?.distance(
     (link: { value?: number }) => 40 + (link.value ?? 1) * 20
   );
 
-  // Distance-based label fading — runs every frame
+  // Randomize initial positions so nodes don't start stacked
+  for (const node of data.nodes) {
+    if (node.x == null) node.x = (Math.random() - 0.5) * 200;
+    if (node.y == null) node.y = (Math.random() - 0.5) * 200;
+    if (node.z == null) node.z = (Math.random() - 0.5) * 200;
+  }
+
+  // Warm up the force simulation so nodes are spread by first render
+  graph.d3ReheatSimulation();
+
+  // Distance-based label fading
   graph.onEngineTick(() => {
     const camera = graph.camera();
     if (!camera) return;
     const camPos = camera.position;
-
-    const nodes = graph.graphData().nodes as NodeObject[];
+    const graphNodes = graph.graphData().nodes as NodeObject[];
     const nodePos = new Vector3();
 
-    for (const node of nodes) {
+    for (const node of graphNodes) {
       const threeObj = (node as Record<string, unknown>).__threeObj as Group | undefined;
       if (!threeObj) continue;
 
@@ -188,14 +179,10 @@ export function createGraph(
       } | undefined;
       if (!label?.material) continue;
 
-      // Skip if highlight module is controlling opacity
-      // (userData.highlightControlled is set by highlight.ts)
       if (threeObj.userData._highlightActive) continue;
 
       nodePos.set(node.x ?? 0, node.y ?? 0, node.z ?? 0);
       const dist = camPos.distanceTo(nodePos);
-
-      // Smoothstep fade: fully visible at NEAR, invisible at FAR
       const t = Math.max(0, Math.min(1, (dist - LABEL_FADE_NEAR) / (LABEL_FADE_FAR - LABEL_FADE_NEAR)));
       label.material.opacity = 1 - t;
     }
@@ -212,20 +199,17 @@ export function createGraph(
   });
 
   setupCameraControls(graph);
+  setupBloom(graph);
 
   return graph;
 }
 
-/**
- * Resets the camera to show all nodes (zoom-to-fit).
- */
+/** Resets the camera to show all nodes. */
 export function resetCamera(graph: GraphInstance): void {
   graph.zoomToFit(1000, 50);
 }
 
-/**
- * Configures OrbitControls with zoom limits and damping.
- */
+/** Configures OrbitControls. */
 function setupCameraControls(graph: GraphInstance): void {
   setTimeout(() => {
     const controls = graph.controls() as OrbitControls;
@@ -241,10 +225,33 @@ function setupCameraControls(graph: GraphInstance): void {
 }
 
 /**
+ * Adds UnrealBloomPass to the graph's post-processing pipeline.
+ * Makes bright star cores naturally bleed light into surrounding pixels,
+ * creating a physically-realistic glow at any zoom level.
+ */
+function setupBloom(graph: GraphInstance): void {
+  setTimeout(() => {
+    const composer = graph.postProcessingComposer();
+    if (!composer) return;
+
+    const renderer = graph.renderer();
+    const bloomPass = new UnrealBloomPass(
+      new Vector2(renderer.domElement.width, renderer.domElement.height),
+      1.2,   // strength — how much glow
+      0.6,   // radius — how far the glow spreads
+      0.15   // threshold — brightness cutoff (low = more things glow)
+    );
+
+    composer.addPass(bloomPass);
+  }, 200);
+}
+
+/**
  * Creates a radial gradient glow texture for star halos.
+ * Tighter falloff than before since bloom handles the outer glow.
  */
 function createGlowCanvas() {
-  const size = 128;
+  const size = 64;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -255,63 +262,13 @@ function createGlowCanvas() {
     size / 2, size / 2, size / 2
   );
   gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-  gradient.addColorStop(0.08, "rgba(255, 255, 255, 0.8)");
-  gradient.addColorStop(0.25, "rgba(200, 230, 255, 0.2)");
-  gradient.addColorStop(0.5, "rgba(150, 200, 255, 0.05)");
+  gradient.addColorStop(0.1, "rgba(255, 255, 255, 0.7)");
+  gradient.addColorStop(0.3, "rgba(200, 230, 255, 0.15)");
+  gradient.addColorStop(0.6, "rgba(150, 200, 255, 0.03)");
   gradient.addColorStop(1, "rgba(100, 150, 255, 0)");
 
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
-
-  return new TextureLoader().load(canvas.toDataURL());
-}
-
-/**
- * Creates a 4-point diffraction spike texture.
- * Produces the classic star "cross" pattern.
- */
-function createSpikeCanvas() {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  const cx = size / 2;
-  const cy = size / 2;
-
-  // Horizontal spike
-  const hGrad = ctx.createLinearGradient(0, cy, size, cy);
-  hGrad.addColorStop(0, "rgba(255,255,255,0)");
-  hGrad.addColorStop(0.35, "rgba(255,255,255,0)");
-  hGrad.addColorStop(0.48, "rgba(255,255,255,0.6)");
-  hGrad.addColorStop(0.5, "rgba(255,255,255,1)");
-  hGrad.addColorStop(0.52, "rgba(255,255,255,0.6)");
-  hGrad.addColorStop(0.65, "rgba(255,255,255,0)");
-  hGrad.addColorStop(1, "rgba(255,255,255,0)");
-
-  ctx.fillStyle = hGrad;
-  ctx.fillRect(0, cy - 1.5, size, 3);
-
-  // Vertical spike
-  const vGrad = ctx.createLinearGradient(cx, 0, cx, size);
-  vGrad.addColorStop(0, "rgba(255,255,255,0)");
-  vGrad.addColorStop(0.35, "rgba(255,255,255,0)");
-  vGrad.addColorStop(0.48, "rgba(255,255,255,0.6)");
-  vGrad.addColorStop(0.5, "rgba(255,255,255,1)");
-  vGrad.addColorStop(0.52, "rgba(255,255,255,0.6)");
-  vGrad.addColorStop(0.65, "rgba(255,255,255,0)");
-  vGrad.addColorStop(1, "rgba(255,255,255,0)");
-
-  ctx.fillStyle = vGrad;
-  ctx.fillRect(cx - 1.5, 0, 3, size);
-
-  // Bright center point
-  const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 4);
-  cGrad.addColorStop(0, "rgba(255,255,255,1)");
-  cGrad.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = cGrad;
-  ctx.fillRect(cx - 4, cy - 4, 8, 8);
 
   return new TextureLoader().load(canvas.toDataURL());
 }

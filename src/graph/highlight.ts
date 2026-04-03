@@ -170,7 +170,11 @@ type GlowRef = {
   scale?: { set: (x: number, y: number, z: number) => void };
 } | undefined;
 
-/** Applies current brightness values to the Three.js node objects. */
+/**
+ * Applies current brightness values to the Three.js node objects.
+ * Bloom post-processing handles the outer glow — we just need to
+ * control core size and halo opacity for a dramatic effect.
+ */
 function applyVisuals(graph: GraphInstance): void {
   const graphData = graph.graphData();
   const anyHighlighted = hasHighlights();
@@ -183,7 +187,6 @@ function applyVisuals(graph: GraphInstance): void {
     const sprite = userData?.sprite as SpriteRef;
     const core = userData?.core as MeshRef;
     const glow = userData?.glow as GlowRef;
-    const spike = userData?.spike as GlowRef;
 
     const nodeId = String(node.id ?? "");
     const originalColor = (userData?.originalColor as string) ?? "#ffffff";
@@ -191,70 +194,48 @@ function applyVisuals(graph: GraphInstance): void {
 
     if (state && state.brightness > BRIGHTNESS_THRESHOLD) {
       const b = state.brightness;
-      // Mark as highlight-controlled so distance-fade doesn't override
       userData._highlightActive = true;
 
-      // Label: bright and visible regardless of distance
+      // Label: visible regardless of distance during highlight
       if (sprite) {
         sprite.color = lerpColor(originalColor, "#ffffff", b);
         if (sprite.material) sprite.material.opacity = 0.5 + 0.5 * b;
       }
-      // Core pulses larger
+      // Core grows — bloom amplifies the bigger bright surface
       if (core) {
-        if (core.material) core.material.opacity = 0.9 + 0.1 * b;
-        if (core.scale) core.scale.setScalar(1 + b * 1.2);
-        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", b * 0.8));
+        if (core.scale) core.scale.setScalar(1 + b * 2.5);
+        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", b * 0.9));
       }
-      // Glow expands
+      // Halo expands and intensifies
       if (glow) {
-        const s = 10 + b * 20;
+        const s = 8 + b * 18;
         if (glow.scale) glow.scale.set(s, s, 1);
-        if (glow.material) glow.material.opacity = 0.5 + b * 0.4;
-      }
-      // Spikes intensify
-      if (spike) {
-        const ss = 18 + b * 20;
-        if (spike.scale) spike.scale.set(ss, ss, 1);
-        if (spike.material) spike.material.opacity = 0.25 + b * 0.5;
+        if (glow.material) glow.material.opacity = 0.4 + b * 0.5;
       }
     } else if (anyHighlighted) {
-      // Dimmed: other nodes while some are highlighted
+      // Dimmed: tiny faint star
       userData._highlightActive = true;
       if (sprite) {
         sprite.color = originalColor;
-        if (sprite.material) sprite.material.opacity = 0.06;
+        if (sprite.material) sprite.material.opacity = 0.05;
       }
       if (core) {
-        if (core.material) core.material.opacity = 0.2;
-        if (core.scale) core.scale.setScalar(0.5);
+        if (core.scale) core.scale.setScalar(0.4);
       }
       if (glow) {
         if (glow.material) glow.material.opacity = 0.03;
-        if (glow.scale) glow.scale.set(6, 6, 1);
-      }
-      if (spike) {
-        if (spike.material) spike.material.opacity = 0.02;
-        if (spike.scale) spike.scale.set(8, 8, 1);
+        if (glow.scale) glow.scale.set(4, 4, 1);
       }
     } else {
-      // Default: no highlights active — let distance-fade control labels
+      // Default: let distance-fade handle labels
       userData._highlightActive = false;
-      if (sprite) {
-        sprite.color = originalColor;
-        // Don't set opacity here — let onEngineTick distance-fade handle it
-      }
       if (core) {
-        if (core.material) core.material.opacity = 1;
         if (core.scale) core.scale.setScalar(1);
-        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", 0.7));
+        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", 0.6));
       }
       if (glow) {
-        if (glow.material) glow.material.opacity = 0.5;
-        if (glow.scale) glow.scale.set(10, 10, 1);
-      }
-      if (spike) {
-        if (spike.material) spike.material.opacity = 0.25;
-        if (spike.scale) spike.scale.set(18, 18, 1);
+        if (glow.material) glow.material.opacity = 0.4;
+        if (glow.scale) glow.scale.set(8, 8, 1);
       }
     }
   }
