@@ -88,10 +88,12 @@ function init(): void {
     activeNotes.add(note);
     highlightPianoKey(pianoSvg, note, true);
 
-    // Play sound
-    noteOn(note);
+    // Only play synth sound for piano/MIDI input, not audio file analysis
+    if (e.detail.source !== "audio") {
+      noteOn(note);
+    }
 
-    // Trigger highlight with fade
+    // Trigger highlight with cumulative fade
     updateNoteHighlights(graph, data);
   }) as EventListener);
 
@@ -104,8 +106,10 @@ function init(): void {
     activeNotes.delete(note);
     highlightPianoKey(pianoSvg, note, false);
 
-    // Release sound
-    noteOff(note);
+    // Only release synth for piano/MIDI input
+    if (e.detail.source !== "audio") {
+      noteOff(note);
+    }
 
     if (activeNotes.size === 0) {
       // Let the fade animation handle the visual decay — don't clear instantly

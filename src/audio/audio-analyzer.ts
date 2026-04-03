@@ -263,8 +263,8 @@ function stopAnalysis(): void {
   }
 }
 
-/** Dispatches a custom note event on the document. */
+/** Dispatches a custom note event on the document, tagged as audio source. */
 function dispatchNoteEvent(type: string, note: NoteName): void {
-  const detail: NoteEventDetail = { note };
+  const detail: NoteEventDetail = { note, source: "audio" };
   document.dispatchEvent(new CustomEvent(type, { detail }));
 }

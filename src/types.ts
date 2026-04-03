@@ -133,4 +133,6 @@ export interface ScaleMatch {
 /** Custom event detail for piano note events. */
 export interface NoteEventDetail {
   note: NoteName;
+  /** Source of the event — used to suppress synth sound during audio playback. */
+  source?: "piano" | "midi" | "audio";
 }

@@ -1,10 +1,13 @@
 /**
- * Highlight module — manages visual highlighting of graph nodes with fade decay.
+ * Highlight module — manages visual highlighting of graph nodes with
+ * cumulative intensity and fade decay.
  *
- * When notes are played, matching scale nodes light up brightly then
- * gradually fade back to their original state over ~2 seconds, like
- * the decay of a musical note. Uses requestAnimationFrame for smooth
- * per-frame interpolation.
+ * Each note trigger adds a small increment of brightness to matching
+ * scale nodes. Brightness decays exponentially over time. Scales that
+ * are triggered repeatedly (e.g., during a song) accumulate brightness
+ * and glow more intensely, naturally revealing the most-used scales.
+ *
+ * Brightness is capped at 1.0 and decays with a ~3s half-life.
  *
  * @module graph/highlight
  *
@@ -19,15 +22,19 @@
 import type { GraphInstance } from "./graph";
 import type { NodeObject } from "three-forcegraph";
 
-/** How long a highlight takes to fully fade out (ms). */
-const FADE_DURATION_MS = 2000;
+/** How much brightness each trigger adds (0–1 scale). */
+const TRIGGER_INCREMENT = 0.25;
 
-/** Per-node highlight state tracking fade progress. */
+/** Decay rate — brightness multiplied by this per second. ~3s to fade from 1→0.05 */
+const DECAY_RATE = 0.35;
+
+/** Brightness below this is considered "off". */
+const BRIGHTNESS_THRESHOLD = 0.02;
+
+/** Per-node highlight state. */
 interface NodeHighlightState {
-  /** Current brightness (1 = fully lit, 0 = default). */
+  /** Current brightness (0–1, cumulative). */
   brightness: number;
-  /** Timestamp when the node was last triggered. */
-  triggeredAt: number;
 }
 
 /** Highlight state for all nodes. */
@@ -42,14 +49,17 @@ let rafId: number | null = null;
 /** Whether the animation loop is running. */
 let loopRunning = false;
 
+/** Last frame timestamp for delta-time calculation. */
+let lastFrameTime = 0;
+
 /**
  * Starts the highlight animation loop. Call once after graph initialization.
- * The loop runs continuously and updates node opacities each frame.
  */
 export function startHighlightLoop(graph: GraphInstance): void {
   graphRef = graph;
   if (!loopRunning) {
     loopRunning = true;
+    lastFrameTime = performance.now();
     rafId = requestAnimationFrame(animationTick);
   }
 }
@@ -66,14 +76,17 @@ export function stopHighlightLoop(): void {
 }
 
 /**
- * Triggers highlights on the given node IDs. Each triggered node
- * jumps to full brightness and then fades out over FADE_DURATION_MS.
- * Calling this again on the same node resets its fade timer.
+ * Triggers highlights on the given node IDs. Each trigger adds
+ * TRIGGER_INCREMENT brightness (cumulative, capped at 1.0).
+ * Repeated triggers on the same node build up intensity.
  */
 export function triggerHighlights(nodeIds: Set<string>): void {
-  const now = performance.now();
   for (const id of nodeIds) {
-    nodeStates.set(id, { brightness: 1, triggeredAt: now });
+    const existing = nodeStates.get(id);
+    const currentBrightness = existing ? existing.brightness : 0;
+    nodeStates.set(id, {
+      brightness: Math.min(1, currentBrightness + TRIGGER_INCREMENT),
+    });
   }
 }
 
@@ -86,11 +99,11 @@ export function clearHighlights(graph: GraphInstance): void {
 }
 
 /**
- * Returns whether any nodes are currently highlighted (brightness > 0).
+ * Returns whether any nodes are currently highlighted (brightness > threshold).
  */
 export function hasHighlights(): boolean {
   for (const state of nodeStates.values()) {
-    if (state.brightness > 0.01) return true;
+    if (state.brightness > BRIGHTNESS_THRESHOLD) return true;
   }
   return false;
 }
@@ -101,31 +114,31 @@ export function hasHighlights(): boolean {
 export function getHighlightedNodes(): ReadonlySet<string> {
   const result = new Set<string>();
   for (const [id, state] of nodeStates) {
-    if (state.brightness > 0.01) result.add(id);
+    if (state.brightness > BRIGHTNESS_THRESHOLD) result.add(id);
   }
   return result;
 }
 
-/** Animation loop — updates fade state and applies visuals each frame. */
+/** Animation loop — decays brightness and applies visuals each frame. */
 function animationTick(timestamp: number): void {
   if (!loopRunning || !graphRef) return;
 
-  // Update brightness based on elapsed time
-  let anyActive = false;
+  const dt = (timestamp - lastFrameTime) / 1000; // delta in seconds
+  lastFrameTime = timestamp;
+
+  // Exponential decay: brightness *= DECAY_RATE^dt
+  const decayFactor = Math.pow(DECAY_RATE, dt);
+
+  const toRemove: string[] = [];
   for (const [id, state] of nodeStates) {
-    const elapsed = timestamp - state.triggeredAt;
-    if (elapsed >= FADE_DURATION_MS) {
-      state.brightness = 0;
-    } else {
-      // Exponential decay for a natural sound-like fade
-      state.brightness = Math.exp(-3 * (elapsed / FADE_DURATION_MS));
-      anyActive = true;
+    state.brightness *= decayFactor;
+    if (state.brightness < BRIGHTNESS_THRESHOLD) {
+      toRemove.push(id);
     }
   }
 
-  // Clean up fully faded nodes
-  if (!anyActive) {
-    nodeStates.clear();
+  for (const id of toRemove) {
+    nodeStates.delete(id);
   }
 
   applyVisuals(graphRef);
@@ -141,7 +154,8 @@ function applyVisuals(graph: GraphInstance): void {
     const threeObj = (node as Record<string, unknown>).__threeObj;
     if (!threeObj) continue;
 
-    const userData = (threeObj as { userData: Record<string, unknown> }).userData;
+    const userData = (threeObj as { userData: Record<string, unknown> })
+      .userData;
     const sprite = userData?.sprite as {
       material?: { opacity: number };
       color?: string;
@@ -152,8 +166,8 @@ function applyVisuals(graph: GraphInstance): void {
     const originalColor = (userData.originalColor as string) ?? "#ffffff";
     const state = nodeStates.get(nodeId);
 
-    if (state && state.brightness > 0.01) {
-      // Highlighted: interpolate between original color and white based on brightness
+    if (state && state.brightness > BRIGHTNESS_THRESHOLD) {
+      // Highlighted: interpolate toward white based on brightness
       sprite.color = lerpColor(originalColor, "#ffffff", state.brightness);
       if (sprite.material) {
         sprite.material.opacity = 0.3 + 0.7 * state.brightness;
@@ -172,9 +186,6 @@ function applyVisuals(graph: GraphInstance): void {
 
 /**
  * Linearly interpolates between two hex colors.
- * @param from - Start color (hex string like "#ff0000")
- * @param to - End color
- * @param t - Interpolation factor (0 = from, 1 = to)
  */
 function lerpColor(from: string, to: string, t: number): string {
   const f = parseHex(from);
