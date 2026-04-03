@@ -1,0 +1,73 @@
+/**
+ * Piano keyboard styles — key colors, highlights, and animations.
+ */
+
+.piano-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 1rem 1rem;
+  background: linear-gradient(
+    to top,
+    rgba(10, 14, 23, 0.95),
+    rgba(10, 14, 23, 0.6)
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.piano-keyboard {
+  max-width: 800px;
+  width: 100%;
+  height: auto;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* White keys */
+.piano-key--white {
+  fill: #e8edf2;
+  stroke: #bbb;
+  stroke-width: 0.5;
+  transition: fill 0.1s ease;
+}
+
+.piano-key--white:hover {
+  fill: #d0dae5;
+}
+
+.piano-key--white.piano-key--pressed {
+  fill: #b0c4d8;
+}
+
+/* Black keys */
+.piano-key--black {
+  fill: #1a1a2e;
+  stroke: #333;
+  stroke-width: 0.5;
+  transition: fill 0.1s ease;
+}
+
+.piano-key--black:hover {
+  fill: #2a2a3e;
+}
+
+.piano-key--black.piano-key--pressed {
+  fill: #3a3a5e;
+}
+
+/* Active highlight (from MIDI, audio, or note matching) */
+.piano-key--active.piano-key--white {
+  fill: var(--color-accent, #62d0f0);
+  filter: drop-shadow(0 0 6px var(--color-accent, #62d0f0));
+}
+
+.piano-key--active.piano-key--black {
+  fill: var(--color-accent, #62d0f0);
+  filter: drop-shadow(0 0 6px var(--color-accent, #62d0f0));
+}
+
+/* Combined pressed + active */
+.piano-key--pressed.piano-key--active {
+  filter: drop-shadow(0 0 10px var(--color-highlight, #ffd700));
+}

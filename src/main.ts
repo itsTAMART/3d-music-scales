@@ -2,42 +2,98 @@
  * Application entry point — initializes all modules and wires them together.
  *
  * Loads data, creates the DOM layout, initializes the 3D graph,
- * and sets up event handlers for node selection.
+ * sets up the piano keyboard, and connects the note event pipeline
+ * for scale highlighting.
  *
  * @module main
  */
 
 import { loadAppData } from "./data/loader";
 import { createLayout } from "./ui/layout";
-import { createGraph } from "./graph/graph";
+import { createGraph, type GraphInstance } from "./graph/graph";
+import { updateHighlights, clearHighlights } from "./graph/highlight";
 import { updateScalePanel } from "./ui/scale-panel";
 import { updateChordPanel } from "./ui/chord-panel";
-import type { AppData } from "./types";
+import { createPiano, highlightPianoKey, clearPianoHighlights } from "./piano/piano";
+import { matchScales, normalizeNote } from "./music/note-utils";
+import type { AppData, NoteName, NoteEventDetail } from "./types";
 
 import "./styles/main.css";
 import "./styles/panels.css";
 import "./styles/typography.css";
+
+/** Currently active notes from any input source. */
+const activeNotes = new Set<NoteName>();
 
 /** Initialize the application. */
 function init(): void {
   const app = document.getElementById("app");
   if (!app) throw new Error("Missing #app element");
 
-  // Load all data synchronously (bundled JSON imports)
+  // Load all data (bundled JSON imports)
   const data: AppData = loadAppData();
 
   // Create DOM layout
   const elements = createLayout(app);
 
-  // Initialize 3D graph with node click handler
-  createGraph(elements.graphContainer, data.scaleGraph, (scaleId: string) => {
-    updateScalePanel(scaleId, data, {
-      scaleNameEl: elements.scaleNameEl,
-      scaleNotesEl: elements.scaleNotesEl,
-      relatedScalesEl: elements.relatedScalesEl,
-    });
-    updateChordPanel(scaleId, data, elements.relatedChordsEl);
-  });
+  // Initialize 3D graph
+  const graph: GraphInstance = createGraph(
+    elements.graphContainer,
+    data.scaleGraph,
+    (scaleId: string) => {
+      updateScalePanel(scaleId, data, {
+        scaleNameEl: elements.scaleNameEl,
+        scaleNotesEl: elements.scaleNotesEl,
+        relatedScalesEl: elements.relatedScalesEl,
+      });
+      updateChordPanel(scaleId, data, elements.relatedChordsEl);
+    }
+  );
+
+  // Initialize piano keyboard
+  const pianoSvg = createPiano(elements.bottomPanel);
+
+  // Wire up note events from all sources (piano, MIDI, audio)
+  document.addEventListener("piano:noteon", ((e: CustomEvent<NoteEventDetail>) => {
+    const note = normalizeNote(e.detail.note);
+    if (!note) return;
+
+    activeNotes.add(note);
+    highlightPianoKey(pianoSvg, note, true);
+    updateNoteHighlights(graph, data);
+  }) as EventListener);
+
+  document.addEventListener("piano:noteoff", ((e: CustomEvent<NoteEventDetail>) => {
+    const note = normalizeNote(e.detail.note);
+    if (!note) return;
+
+    activeNotes.delete(note);
+    highlightPianoKey(pianoSvg, note, false);
+
+    if (activeNotes.size === 0) {
+      clearHighlights(graph);
+      clearPianoHighlights(pianoSvg);
+    } else {
+      updateNoteHighlights(graph, data);
+    }
+  }) as EventListener);
+}
+
+/**
+ * Matches active notes against scales and updates graph highlighting.
+ */
+function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
+  const matches = matchScales(activeNotes, data.scaleDict);
+
+  // Highlight scales where ALL active notes match (score === 1)
+  // and scales with high partial matches (score >= 0.5)
+  const highlightIds = new Set(
+    matches
+      .filter((m) => m.score >= 0.5)
+      .map((m) => m.scaleId)
+  );
+
+  updateHighlights(graph, highlightIds);
 }
 
 // Run when DOM is ready
