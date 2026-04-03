@@ -15,6 +15,7 @@ import { updateHighlights, clearHighlights } from "./graph/highlight";
 import { updateScalePanel } from "./ui/scale-panel";
 import { updateChordPanel } from "./ui/chord-panel";
 import { createPiano, highlightPianoKey, clearPianoHighlights } from "./piano/piano";
+import { createMIDIButton } from "./audio/midi-input";
 import { matchScales, normalizeNote } from "./music/note-utils";
 import type { AppData, NoteName, NoteEventDetail } from "./types";
 
@@ -52,6 +53,9 @@ function init(): void {
 
   // Initialize piano keyboard
   const pianoSvg = createPiano(elements.bottomPanel);
+
+  // Initialize MIDI controls
+  createMIDIButton(elements.controlsEl);
 
   // Wire up note events from all sources (piano, MIDI, audio)
   document.addEventListener("piano:noteon", ((e: CustomEvent<NoteEventDetail>) => {

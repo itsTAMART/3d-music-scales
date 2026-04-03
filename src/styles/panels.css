@@ -122,3 +122,127 @@
   font-style: italic;
   padding: 0.5rem 0;
 }
+
+/* MIDI controls */
+.midi-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.midi-button {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  background: rgba(98, 208, 240, 0.1);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.midi-button:hover:not(:disabled) {
+  background: rgba(98, 208, 240, 0.2);
+  border-color: var(--color-accent);
+}
+
+.midi-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.midi-status {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.midi-status--connected {
+  color: var(--color-success);
+}
+
+.midi-status--error {
+  color: var(--color-danger);
+}
+
+/* Audio controls */
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.audio-upload-label {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.15);
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.audio-upload-label:hover {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: var(--color-success);
+}
+
+.audio-play-btn {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.audio-play-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.audio-play-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-status {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.audio-status--active {
+  color: var(--color-highlight);
+}
+
+.audio-status--error {
+  color: var(--color-danger);
+}
+
+.experimental-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-highlight);
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  margin-left: 0.25rem;
+}

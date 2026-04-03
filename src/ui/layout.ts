@@ -19,6 +19,7 @@ export interface LayoutElements {
   leftPanel: HTMLDivElement;
   rightPanel: HTMLDivElement;
   bottomPanel: HTMLDivElement;
+  controlsEl: HTMLDivElement;
   scaleNameEl: HTMLDivElement;
   scaleNotesEl: HTMLDivElement;
   relatedScalesEl: HTMLDivElement;
@@ -68,6 +69,12 @@ export function createLayout(root: HTMLElement): LayoutElements {
   chordsBlock.appendChild(relatedChordsEl);
   rightPanel.appendChild(chordsBlock);
 
+  // Controls block (MIDI + Audio)
+  const controlsBlock = createPanelBlock("CONTROLS");
+  const controlsEl = createElement("div", { className: "controls-list" });
+  controlsBlock.appendChild(controlsEl);
+  rightPanel.appendChild(controlsBlock);
+
   root.appendChild(rightPanel);
 
   // Bottom panel (for piano keyboard)
@@ -79,6 +86,7 @@ export function createLayout(root: HTMLElement): LayoutElements {
     leftPanel,
     rightPanel,
     bottomPanel,
+    controlsEl,
     scaleNameEl,
     scaleNotesEl,
     relatedScalesEl,
