@@ -251,6 +251,13 @@
   cursor: not-allowed;
 }
 
+.midi-button--active {
+  background: rgba(80, 180, 255, 0.2);
+  border-color: var(--color-accent);
+  color: var(--color-text-bright);
+  box-shadow: 0 0 8px rgba(80, 180, 255, 0.1);
+}
+
 .audio-upload-label {
   font-family: var(--font-heading);
   font-size: 0.65rem;

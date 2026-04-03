@@ -1,10 +1,12 @@
 /**
  * Graph module — initializes and manages the 3D force-directed graph.
  *
- * Renders scale nodes as glowing stars with bloom post-processing,
- * distance-based label fading, and constellation-line links.
- * Uses UnrealBloomPass for physically-realistic light bleed that
- * makes stars look impressive at any zoom level.
+ * Renders three types of nodes as stars with different visual styles:
+ * - Scale nodes: medium bright stars (default)
+ * - Chord nodes: smaller, dimmer stars
+ * - Note nodes: bright, slightly larger stars with distinct color
+ *
+ * Uses bloom post-processing and distance-based label fading.
  *
  * @module graph/graph
  */
@@ -28,29 +30,43 @@ import {
 } from "three";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { GraphData } from "../types";
+import type { UnifiedNode } from "../data/graph-builder";
+import type { ScaleLink } from "../types";
+import { displayNote } from "../music/notation";
 
 /** Callback type for when a graph node is clicked. */
-export type NodeClickHandler = (nodeId: string) => void;
+export type NodeClickHandler = (nodeId: string, nodeType: string) => void;
 
 /** Re-export the graph instance type for use by other modules. */
 export type GraphInstance = ForceGraph3DInstance;
 
-/** Shared glow texture (created once). */
+/** Shared glow texture. */
 let glowTexture: ReturnType<typeof createGlowCanvas> | null = null;
 
 /** Distance at which labels start appearing. */
 const LABEL_FADE_NEAR = 80;
-/** Distance at which labels are fully invisible. */
 const LABEL_FADE_FAR = 220;
+
+/** Node type visual configs. */
+const NODE_STYLES: Record<string, {
+  coreSize: number;
+  glowSize: number;
+  glowOpacity: number;
+  textSize: number;
+  textY: number;
+  whiteMix: number;
+}> = {
+  scale: { coreSize: 0.5, glowSize: 8, glowOpacity: 0.4, textSize: 2.8, textY: 5, whiteMix: 0.6 },
+  chord: { coreSize: 0.25, glowSize: 4, glowOpacity: 0.2, textSize: 2.0, textY: 3.5, whiteMix: 0.4 },
+  note:  { coreSize: 0.8, glowSize: 12, glowOpacity: 0.6, textSize: 3.5, textY: 6, whiteMix: 0.8 },
+};
 
 /**
  * Creates and initializes the 3D force graph.
- * Stars with bloom, distance-faded labels, and constellation links.
  */
 export function createGraph(
   container: HTMLElement,
-  data: GraphData,
+  data: { nodes: UnifiedNode[]; links: ScaleLink[] },
   onNodeClick: NodeClickHandler
 ): GraphInstance {
   const config: ConfigOptions = { controlType: "orbit" };
@@ -65,51 +81,54 @@ export function createGraph(
       const id = (node.id as string) ?? "";
       const color =
         ((node as Record<string, unknown>).color as string) ?? "#ffffff";
+      const nodeType =
+        ((node as Record<string, unknown>).nodeType as string) ?? "scale";
 
+      const style = NODE_STYLES[nodeType] ?? NODE_STYLES.scale;
       const group = new Group();
 
-      // Invisible sphere for drag/click hit area
+      // Invisible hit area
       group.add(
         new Mesh(
           new SphereGeometry(8),
-          new MeshBasicMaterial({
-            depthWrite: false,
-            transparent: true,
-            opacity: 0,
-          })
+          new MeshBasicMaterial({ depthWrite: false, transparent: true, opacity: 0 })
         )
       );
 
-      // Star core — small bright point (bloom makes it glow)
-      const coreColor = new Color(color).lerp(new Color("#ffffff"), 0.6);
+      // Star core
+      const coreColor = new Color(color).lerp(new Color("#ffffff"), style.whiteMix);
       const core = new Mesh(
-        new SphereGeometry(0.5, 12, 12),
-        new MeshBasicMaterial({
-          color: coreColor,
-          transparent: false,
-        })
+        new SphereGeometry(style.coreSize, 12, 12),
+        new MeshBasicMaterial({ color: coreColor, transparent: false })
       );
       group.add(core);
 
-      // Soft halo sprite (additive, subtle — bloom does the heavy lifting)
+      // Glow halo
       const glowMat = new SpriteMaterial({
         map: glowTexture!,
         color: new Color(color),
         transparent: true,
-        opacity: 0.4,
+        opacity: style.glowOpacity,
         blending: AdditiveBlending,
         depthWrite: false,
       });
       const glow = new Sprite(glowMat);
-      glow.scale.set(8, 8, 1);
+      glow.scale.set(style.glowSize, style.glowSize, 1);
       group.add(glow);
 
-      // Text label — invisible at distance, fades in when close
-      const sprite = new SpriteText(id);
+      // Label — use display notation for note nodes
+      let labelText = id;
+      if (nodeType === "note") {
+        // Strip the ♪ prefix and convert
+        const rawNote = id.replace("♪ ", "");
+        labelText = displayNote(rawNote);
+      }
+
+      const sprite = new SpriteText(labelText);
       sprite.color = color;
-      sprite.textHeight = 2.8;
-      sprite.fontWeight = "300";
-      sprite.position.y = 5;
+      sprite.textHeight = style.textSize;
+      sprite.fontWeight = nodeType === "note" ? "600" : "300";
+      sprite.position.y = style.textY;
       sprite.material.transparent = true;
       sprite.material.opacity = 0;
       group.add(sprite);
@@ -118,14 +137,22 @@ export function createGraph(
       group.userData.core = core;
       group.userData.glow = glow;
       group.userData.nodeId = id;
+      group.userData.nodeType = nodeType;
       group.userData.originalColor = color;
 
       return group;
     })
-    // Constellation links — thin, faint
-    .linkColor(() => "rgba(60, 140, 220, 0.10)")
+    .linkColor((link: Record<string, unknown>) => {
+      // Different link colors based on what's connected
+      const val = (link.value as number) ?? 1;
+      if (val >= 3) return "rgba(100, 220, 180, 0.06)"; // note-scale links
+      return "rgba(60, 140, 220, 0.10)";
+    })
     .linkOpacity(1)
-    .linkWidth(0.2)
+    .linkWidth((link: Record<string, unknown>) => {
+      const val = (link.value as number) ?? 1;
+      return val >= 3 ? 0.1 : 0.2; // note links thinner
+    })
     .onNodeHover((node: NodeObject | null) => {
       container.style.cursor = node ? "pointer" : "";
     })
@@ -142,24 +169,28 @@ export function createGraph(
         3000
       );
 
-      onNodeClick((node.id as string) ?? "");
+      const nodeType = ((node as Record<string, unknown>).nodeType as string) ?? "scale";
+      onNodeClick((node.id as string) ?? "", nodeType);
     })
     .backgroundColor("rgba(0,0,0,0)");
 
-  // Spread the graph wider
+  // Force layout tuning
   graph.d3Force("charge")?.strength(-120);
   graph.d3Force("link")?.distance(
-    (link: { value?: number }) => 40 + (link.value ?? 1) * 20
+    (link: { value?: number }) => {
+      const v = link.value ?? 1;
+      if (v >= 3) return 60; // note-scale: moderate distance
+      return 40 + v * 20;
+    }
   );
 
-  // Randomize initial positions so nodes don't start stacked
+  // Randomize initial positions
   for (const node of data.nodes) {
     if (node.x == null) node.x = (Math.random() - 0.5) * 200;
     if (node.y == null) node.y = (Math.random() - 0.5) * 200;
     if (node.z == null) node.z = (Math.random() - 0.5) * 200;
   }
 
-  // Warm up the simulation so nodes are spread by first render
   graph.d3ReheatSimulation();
 
   // Distance-based label fading
@@ -178,7 +209,6 @@ export function createGraph(
         material?: { opacity: number };
       } | undefined;
       if (!label?.material) continue;
-
       if (threeObj.userData._highlightActive) continue;
 
       nodePos.set(node.x ?? 0, node.y ?? 0, node.z ?? 0);
@@ -204,6 +234,22 @@ export function createGraph(
   return graph;
 }
 
+/**
+ * Updates the graph data (e.g., when toggling layers).
+ */
+export function updateGraphData(
+  graph: GraphInstance,
+  data: { nodes: UnifiedNode[]; links: ScaleLink[] }
+): void {
+  // Randomize new nodes' positions
+  for (const node of data.nodes) {
+    if (node.x == null) node.x = (Math.random() - 0.5) * 200;
+    if (node.y == null) node.y = (Math.random() - 0.5) * 200;
+    if (node.z == null) node.z = (Math.random() - 0.5) * 200;
+  }
+  graph.graphData(data);
+}
+
 /** Resets the camera to show all nodes. */
 export function resetCamera(graph: GraphInstance): void {
   graph.zoomToFit(1000, 50);
@@ -224,12 +270,8 @@ function setupCameraControls(graph: GraphInstance): void {
   }, 500);
 }
 
-/**
- * Adds UnrealBloomPass to the graph's post-processing pipeline.
- * Waits for the renderer to be fully initialized before adding.
- */
+/** Adds bloom post-processing. */
 function setupBloom(graph: GraphInstance): void {
-  // Wait for the graph to fully initialize and render at least once
   setTimeout(() => {
     try {
       const composer = graph.postProcessingComposer();
@@ -241,22 +283,16 @@ function setupBloom(graph: GraphInstance): void {
 
       const bloomPass = new UnrealBloomPass(
         new Vector2(width, height),
-        1.0,   // strength
-        0.5,   // radius
-        0.2    // threshold
+        1.0, 0.5, 0.2
       );
-
       composer.addPass(bloomPass);
     } catch {
-      // Silently fail — bloom is cosmetic, not critical
+      // Bloom is cosmetic, not critical
     }
   }, 1000);
 }
 
-/**
- * Creates a radial gradient glow texture for star halos.
- * Tighter falloff than before since bloom handles the outer glow.
- */
+/** Creates a radial gradient glow texture. */
 function createGlowCanvas() {
   const size = 64;
   const canvas = document.createElement("canvas");
