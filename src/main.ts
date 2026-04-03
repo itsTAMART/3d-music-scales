@@ -26,6 +26,7 @@ import {
 } from "./piano/piano";
 import { initKeyboardBindings } from "./piano/keyboard-bindings";
 import { noteOn, noteOff } from "./piano/synth";
+import { createNoteHistogram, triggerNote } from "./piano/note-histogram";
 import { createMIDIButton } from "./audio/midi-input";
 import { createAudioControls } from "./audio/audio-analyzer";
 import { matchScales, normalizeNote } from "./music/note-utils";
@@ -70,8 +71,18 @@ function init(): void {
   // Start cinematic auto-camera (idle orbit + music tracking)
   initCameraMotion(graph, elements.graphContainer);
 
-  // Initialize piano keyboard + keyboard bindings
+  // Initialize piano keyboard + histogram + keyboard bindings
   const pianoSvg = createPiano(elements.bottomPanel);
+  // Insert histogram above the piano SVG inside the wrapper
+  const pianoWrapper = elements.bottomPanel.querySelector(".piano-wrapper");
+  if (pianoWrapper) {
+    createNoteHistogram(pianoWrapper as HTMLElement);
+    // Move histogram before the SVG (it was appended after)
+    const histogramEl = pianoWrapper.querySelector(".note-histogram");
+    if (histogramEl) {
+      pianoWrapper.insertBefore(histogramEl, pianoWrapper.firstChild);
+    }
+  }
   initKeyboardBindings();
 
   // Reset camera button
@@ -92,6 +103,7 @@ function init(): void {
 
     activeNotes.add(note);
     highlightPianoKey(pianoSvg, note, true);
+    triggerNote(note);
 
     // Only play synth sound for piano/MIDI input, not audio file analysis
     if (e.detail.source !== "audio") {

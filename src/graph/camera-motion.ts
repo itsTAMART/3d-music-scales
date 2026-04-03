@@ -214,8 +214,9 @@ function updateAutoCamera(dt: number, timestamp: number): void {
 }
 
 /**
- * Computes the brightness-weighted center-of-mass of highlighted nodes.
- * Returns null if no nodes are highlighted.
+ * Finds the single brightest node and returns its position.
+ * Avoids the center-of-mass problem where the target ends up in
+ * empty space (e.g., the hole of a donut-shaped graph).
  */
 function computeMusicTarget(): { x: number; y: number; z: number } | null {
   if (!state) return null;
@@ -225,32 +226,23 @@ function computeMusicTarget(): { x: number; y: number; z: number } | null {
 
   const nodes = state.graph.graphData().nodes as NodeObject[];
 
-  let totalWeight = 0;
-  let wx = 0, wy = 0, wz = 0;
+  let bestNode: NodeObject | null = null;
+  let bestBrightness = 0;
 
   for (const node of nodes) {
     const id = String(node.id ?? "");
-    const weight = brightness.get(id);
-    if (weight == null || weight < 0.05) continue;
-
-    const { x, y, z } = node;
-    if (x == null || y == null || z == null) continue;
-
-    // Use brightness squared to bias toward the brightest nodes
-    const w = weight * weight;
-    wx += x * w;
-    wy += y * w;
-    wz += z * w;
-    totalWeight += w;
+    const b = brightness.get(id);
+    if (b != null && b > bestBrightness) {
+      bestBrightness = b;
+      bestNode = node;
+    }
   }
 
-  if (totalWeight < 0.01) return null;
+  if (!bestNode || bestNode.x == null || bestNode.y == null || bestNode.z == null) {
+    return null;
+  }
 
-  return {
-    x: wx / totalWeight,
-    y: wy / totalWeight,
-    z: wz / totalWeight,
-  };
+  return { x: bestNode.x, y: bestNode.y, z: bestNode.z };
 }
 
 /**

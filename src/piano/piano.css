@@ -4,8 +4,9 @@
 
 .piano-wrapper {
   display: flex;
-  justify-content: center;
-  padding: 0.5rem 1rem 1rem;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem 1rem;
   background: linear-gradient(
     to top,
     rgba(10, 14, 23, 0.95),
@@ -13,6 +14,60 @@
   );
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Note histogram — sits above the piano */
+.note-histogram {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 800px;
+  width: 100%;
+  height: 60px;
+  padding: 0 0 2px;
+  gap: 1px;
+}
+
+.histogram-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  height: 100%;
+}
+
+.histogram-column--white {
+  flex: 1.2;
+}
+
+.histogram-column--black {
+  flex: 0.8;
+}
+
+.histogram-bar {
+  width: 80%;
+  min-width: 4px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.08s ease-out;
+}
+
+.histogram-column--white .histogram-bar {
+  background: var(--color-accent, #62d0f0);
+}
+
+.histogram-column--black .histogram-bar {
+  background: var(--color-success, #2ecc71);
+}
+
+.histogram-label {
+  font-family: var(--font-heading, sans-serif);
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-dim, rgba(255,255,255,0.5));
+  letter-spacing: 0.02em;
+  padding-top: 1px;
+  white-space: nowrap;
 }
 
 .piano-keyboard {
