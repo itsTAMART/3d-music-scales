@@ -14,6 +14,7 @@
  */
 
 import type { AppData } from "../types";
+import { displayNote, displayScaleName } from "../music/notation";
 
 /**
  * Updates the chord panel with chords related to the selected scale.
@@ -72,17 +73,16 @@ function renderChords(
 
     const nameDiv = document.createElement("div");
     nameDiv.className = "item-name";
-    nameDiv.textContent = chord.name;
+    nameDiv.textContent = displayScaleName(chord.name);
 
     const notesDiv = document.createElement("div");
     notesDiv.className = "item-notes";
 
-    // Look up notes for this chord in the scale dict (it has chord entries too)
     const info = scaleDict[chord.name];
     if (info) {
       const noteSpan = document.createElement("span");
       noteSpan.className = "note";
-      noteSpan.textContent = info.notes.join(", ");
+      noteSpan.textContent = info.notes.map(displayNote).join(", ");
       notesDiv.appendChild(document.createTextNode("["));
       notesDiv.appendChild(noteSpan);
       notesDiv.appendChild(document.createTextNode("]"));

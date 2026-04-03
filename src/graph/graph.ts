@@ -32,7 +32,7 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { UnifiedNode } from "../data/graph-builder";
 import type { ScaleLink } from "../types";
-import { displayNote } from "../music/notation";
+import { displayNote, displayScaleName } from "../music/notation";
 
 /** Callback type for when a graph node is clicked. */
 export type NodeClickHandler = (nodeId: string, nodeType: string) => void;
@@ -47,19 +47,50 @@ let glowTexture: ReturnType<typeof createGlowCanvas> | null = null;
 const LABEL_FADE_NEAR = 80;
 const LABEL_FADE_FAR = 220;
 
-/** Node type visual configs. */
-const NODE_STYLES: Record<string, {
+/** Visual style for a node. */
+interface NodeStyle {
   coreSize: number;
   glowSize: number;
   glowOpacity: number;
   textSize: number;
   textY: number;
   whiteMix: number;
-}> = {
-  scale: { coreSize: 0.7, glowSize: 10, glowOpacity: 0.5, textSize: 3.0, textY: 5.5, whiteMix: 0.6 },
-  chord: { coreSize: 0.2, glowSize: 3, glowOpacity: 0.15, textSize: 1.8, textY: 3, whiteMix: 0.3 },
-  note:  { coreSize: 0.4, glowSize: 6, glowOpacity: 0.4, textSize: 2.4, textY: 4, whiteMix: 0.7 },
-};
+  fontWeight: string;
+}
+
+/**
+ * Returns the visual style for a node based on its type and group.
+ *
+ * Visual hierarchy (largest → smallest):
+ * - Notes (group 20): bright planets — the fundamental building blocks
+ * - Major scales (group 0): large bright stars — the most important scales
+ * - Minor scales (group 1): medium-large stars
+ * - Blues/Pentatonic (groups 2–5): medium stars
+ * - Chords (group 10): tiny dust particles — most numerous, least prominent
+ */
+function getNodeStyle(nodeType: string, group: number): NodeStyle {
+  if (nodeType === "note") {
+    return { coreSize: 1.0, glowSize: 14, glowOpacity: 0.6, textSize: 3.2, textY: 6, whiteMix: 0.8, fontWeight: "600" };
+  }
+  if (nodeType === "chord") {
+    return { coreSize: 0.15, glowSize: 2, glowOpacity: 0.1, textSize: 1.5, textY: 2.5, whiteMix: 0.25, fontWeight: "300" };
+  }
+  // Scale groups
+  switch (group) {
+    case 0: // Major — bright prominent stars
+      return { coreSize: 0.8, glowSize: 12, glowOpacity: 0.55, textSize: 3.0, textY: 5.5, whiteMix: 0.7, fontWeight: "400" };
+    case 1: // Minor — slightly smaller
+      return { coreSize: 0.6, glowSize: 9, glowOpacity: 0.45, textSize: 2.6, textY: 5, whiteMix: 0.6, fontWeight: "300" };
+    case 2: // Major Blues
+    case 3: // Minor Blues
+      return { coreSize: 0.45, glowSize: 7, glowOpacity: 0.35, textSize: 2.3, textY: 4.5, whiteMix: 0.5, fontWeight: "300" };
+    case 4: // Minor Pentatonic
+    case 5: // Major Pentatonic
+      return { coreSize: 0.4, glowSize: 6, glowOpacity: 0.3, textSize: 2.2, textY: 4, whiteMix: 0.45, fontWeight: "300" };
+    default:
+      return { coreSize: 0.5, glowSize: 8, glowOpacity: 0.4, textSize: 2.5, textY: 5, whiteMix: 0.5, fontWeight: "300" };
+  }
+}
 
 /**
  * Creates and initializes the 3D force graph.
@@ -83,8 +114,9 @@ export function createGraph(
         ((node as Record<string, unknown>).color as string) ?? "#ffffff";
       const nodeType =
         ((node as Record<string, unknown>).nodeType as string) ?? "scale";
+      const nodeGroup = ((node as Record<string, unknown>).group as number) ?? 0;
 
-      const style = NODE_STYLES[nodeType] ?? NODE_STYLES.scale;
+      const style = getNodeStyle(nodeType, nodeGroup);
       const group = new Group();
 
       // Invisible hit area
@@ -116,18 +148,18 @@ export function createGraph(
       glow.scale.set(style.glowSize, style.glowSize, 1);
       group.add(glow);
 
-      // Label — use display notation for note nodes
+      // Label — apply notation conversion for all node types
       let labelText = id;
       if (nodeType === "note") {
-        // Strip the ♪ prefix and convert
-        const rawNote = id.replace("♪ ", "");
-        labelText = displayNote(rawNote);
+        labelText = displayNote(id.replace("♪ ", ""));
+      } else {
+        labelText = displayScaleName(id);
       }
 
       const sprite = new SpriteText(labelText);
       sprite.color = color;
       sprite.textHeight = style.textSize;
-      sprite.fontWeight = nodeType === "note" ? "600" : "300";
+      sprite.fontWeight = style.fontWeight;
       sprite.position.y = style.textY;
       sprite.material.transparent = true;
       sprite.material.opacity = 0;
@@ -251,7 +283,7 @@ export function updateGraphData(
 
 /**
  * Updates all node labels in-place without rebuilding the graph.
- * Used when switching notation mode (ABC ↔ Solfège).
+ * Converts note names in all node types (notes, scales, chords).
  */
 export function refreshLabels(graph: GraphInstance): void {
   const nodes = graph.graphData().nodes as NodeObject[];
@@ -266,10 +298,11 @@ export function refreshLabels(graph: GraphInstance): void {
     const id = (node.id as string) ?? "";
 
     if (nodeType === "note") {
-      const rawNote = id.replace("♪ ", "");
-      sprite.text = displayNote(rawNote);
+      sprite.text = displayNote(id.replace("♪ ", ""));
+    } else {
+      // Scale/chord names: "C# Major Scale" → "Do# Major Scale"
+      sprite.text = displayScaleName(id);
     }
-    // Scale and chord names stay as-is (they include "Major Scale" etc.)
   }
 }
 

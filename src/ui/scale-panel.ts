@@ -15,6 +15,7 @@
 
 import type { AppData, ScaleLink } from "../types";
 import { getLinkNodeId } from "../music/note-utils";
+import { displayNote, displayScaleName } from "../music/notation";
 
 /** DOM elements needed by the scale panel. */
 export interface ScalePanelElements {
@@ -35,8 +36,8 @@ export function updateScalePanel(
   const { scaleDict, scaleGraph } = data;
   const info = scaleDict[scaleId];
 
-  // Update scale name and notes
-  elements.scaleNameEl.textContent = scaleId;
+  // Update scale name and notes (with notation conversion)
+  elements.scaleNameEl.textContent = displayScaleName(scaleId);
 
   if (info) {
     renderNotes(elements.scaleNotesEl, info.notes);
@@ -78,7 +79,7 @@ function renderNotes(container: HTMLElement, notes: string[]): void {
   notes.forEach((note, i) => {
     const span = document.createElement("span");
     span.className = "note";
-    span.textContent = note;
+    span.textContent = displayNote(note);
     container.appendChild(span);
     if (i < notes.length - 1) {
       container.appendChild(document.createTextNode(", "));
@@ -116,7 +117,7 @@ function renderRelatedScales(
 
     const nameDiv = document.createElement("div");
     nameDiv.className = "item-name";
-    nameDiv.textContent = scale.name;
+    nameDiv.textContent = displayScaleName(scale.name);
 
     const notesDiv = document.createElement("div");
     notesDiv.className = "item-notes";
@@ -124,7 +125,7 @@ function renderRelatedScales(
     if (info) {
       const noteSpan = document.createElement("span");
       noteSpan.className = "note";
-      noteSpan.textContent = info.notes.join(", ");
+      noteSpan.textContent = info.notes.map(displayNote).join(", ");
       notesDiv.appendChild(document.createTextNode("["));
       notesDiv.appendChild(noteSpan);
       notesDiv.appendChild(document.createTextNode("]"));

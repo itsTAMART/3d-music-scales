@@ -18,6 +18,7 @@
  */
 
 import { NOTE_NAMES, type NoteName } from "../types";
+import { displayNote, onNotationChange } from "../music/notation";
 
 /** How much intensity each trigger adds. */
 const TRIGGER_INCREMENT = 0.15;
@@ -34,8 +35,9 @@ const THRESHOLD = 0.01;
 /** Per-note intensity state. */
 const noteIntensity = new Map<NoteName, number>();
 
-/** DOM references for each note bar. */
+/** DOM references for each note bar and label. */
 const barElements = new Map<NoteName, HTMLDivElement>();
+const labelElements = new Map<NoteName, HTMLDivElement>();
 
 /** The histogram container element. */
 let histogramEl: HTMLDivElement | null = null;
@@ -65,17 +67,26 @@ export function createNoteHistogram(container: HTMLElement): HTMLDivElement {
 
     const label = document.createElement("div");
     label.className = "histogram-label";
-    label.textContent = note;
+    label.textContent = displayNote(note);
 
     column.appendChild(bar);
     column.appendChild(label);
     histogramEl.appendChild(column);
 
     barElements.set(note, bar);
+    labelElements.set(note, label);
     noteIntensity.set(note, 0);
   }
 
   container.appendChild(histogramEl);
+
+  // Update labels when notation changes
+  onNotationChange(() => {
+    for (const note of NOTE_NAMES) {
+      const label = labelElements.get(note);
+      if (label) label.textContent = displayNote(note);
+    }
+  });
 
   // Start animation loop
   if (!running) {

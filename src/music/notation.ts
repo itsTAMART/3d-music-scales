@@ -1,18 +1,7 @@
 /**
  * Notation module — manages ABC vs Solfège note name display.
  *
- * Provides a global notation mode that all UI components read from,
- * and a function to convert note names between systems.
- *
  * @module music/notation
- *
- * @example
- * ```ts
- * import { displayNote, setNotation, getNotation } from "@/music/notation";
- * displayNote("C");  // "C" (ABC mode)
- * setNotation("solfege");
- * displayNote("C");  // "Do"
- * ```
  */
 
 import type { NoteName } from "../types";
@@ -35,15 +24,10 @@ const SOLFEGE_MAP: Record<NoteName, string> = {
   B: "Si",
 };
 
-/** Current notation mode. */
 let currentMode: NotationMode = "abc";
-
-/** Listeners for notation changes. */
 const listeners: Array<(mode: NotationMode) => void> = [];
 
-/**
- * Returns the display string for a note in the current notation mode.
- */
+/** Returns the display string for a single note name. */
 export function displayNote(note: string): string {
   if (currentMode === "solfege") {
     return SOLFEGE_MAP[note as NoteName] ?? note;
@@ -51,33 +35,37 @@ export function displayNote(note: string): string {
   return note;
 }
 
-/**
- * Converts an array of note names to display strings.
- */
+/** Converts an array of note names to display strings. */
 export function displayNotes(notes: string[]): string[] {
   return notes.map(displayNote);
 }
 
 /**
- * Sets the notation mode globally and notifies listeners.
+ * Converts note names inside a longer string (e.g., "C# Major Scale" → "Do# Major Scale").
+ * Replaces note-name prefixes (A#, C#, etc. and single letters A-G) at the start of the string.
  */
-export function setNotation(mode: NotationMode): void {
-  currentMode = mode;
-  for (const listener of listeners) {
-    listener(mode);
-  }
+export function displayScaleName(name: string): string {
+  if (currentMode === "abc") return name;
+
+  // Match a note name at the start: e.g. "C#", "Db", "C" followed by space or (
+  return name.replace(
+    /^([A-G][#b]?)/,
+    (match) => SOLFEGE_MAP[match as NoteName] ?? match
+  );
 }
 
-/**
- * Returns the current notation mode.
- */
+/** Sets the notation mode globally and notifies listeners. */
+export function setNotation(mode: NotationMode): void {
+  currentMode = mode;
+  for (const listener of listeners) listener(mode);
+}
+
+/** Returns the current notation mode. */
 export function getNotation(): NotationMode {
   return currentMode;
 }
 
-/**
- * Registers a callback for notation mode changes.
- */
+/** Registers a callback for notation mode changes. */
 export function onNotationChange(callback: (mode: NotationMode) => void): void {
   listeners.push(callback);
 }
