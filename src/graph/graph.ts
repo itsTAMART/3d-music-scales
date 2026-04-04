@@ -37,6 +37,9 @@ import { displayNote, displayScaleName } from "../music/notation";
 /** Callback type for when a graph node is clicked. */
 export type NodeClickHandler = (nodeId: string, nodeType: string) => void;
 
+/** Callback for background double-click (deselection). */
+export type BackgroundDblClickHandler = () => void;
+
 /** Re-export the graph instance type for use by other modules. */
 export type GraphInstance = ForceGraph3DInstance;
 
@@ -98,7 +101,8 @@ function getNodeStyle(nodeType: string, group: number): NodeStyle {
 export function createGraph(
   container: HTMLElement,
   data: { nodes: UnifiedNode[]; links: ScaleLink[] },
-  onNodeClick: NodeClickHandler
+  onNodeClick: NodeClickHandler,
+  onDeselect?: BackgroundDblClickHandler
 ): GraphInstance {
   const config: ConfigOptions = { controlType: "orbit" };
 
@@ -106,7 +110,12 @@ export function createGraph(
 
   const graph = new ForceGraph3D(container, config)
     .graphData(data)
-    .nodeLabel("")
+    .nodeLabel((node: NodeObject) => {
+      const id = (node.id as string) ?? "";
+      const nodeType = ((node as Record<string, unknown>).nodeType as string) ?? "scale";
+      if (nodeType === "note") return displayNote(id.replace("♪ ", ""));
+      return displayScaleName(id);
+    })
     .nodeAutoColorBy("group")
     .nodeThreeObject((node: NodeObject) => {
       const id = (node.id as string) ?? "";
@@ -250,18 +259,26 @@ export function createGraph(
     }
   });
 
-  // Double-click background to reset camera
+  // Double-click background to reset camera + deselect
   let lastBgClick = 0;
   graph.onBackgroundClick(() => {
     const now = Date.now();
     if (now - lastBgClick < 400) {
       resetCamera(graph);
+      onDeselect?.();
     }
     lastBgClick = now;
   });
 
   setupCameraControls(graph);
   setupBloom(graph);
+
+  // Fix first-load: force a resize after the container gets its final layout
+  requestAnimationFrame(() => {
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
+    graph.width(w).height(h);
+  });
 
   return graph;
 }

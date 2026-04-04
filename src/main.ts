@@ -13,8 +13,8 @@ import {
   triggerHighlights,
   startHighlightLoop,
 } from "./graph/highlight";
-import { updateScalePanel } from "./ui/scale-panel";
-import { updateChordPanel } from "./ui/chord-panel";
+import { updateScalePanel, clearScalePanel } from "./ui/scale-panel";
+import { updateChordPanel, clearChordPanel } from "./ui/chord-panel";
 import {
   createPiano,
   highlightPianoKey,
@@ -50,18 +50,25 @@ function init(): void {
   // Build unified graph with current layers
   let graphData = buildUnifiedGraph(data, layers);
 
+  const panelElements = {
+    scaleNameEl: elements.scaleNameEl,
+    scaleNotesEl: elements.scaleNotesEl,
+    relatedScalesEl: elements.relatedScalesEl,
+  };
+
   // Initialize 3D graph
   const graph: GraphInstance = createGraph(
     elements.graphContainer,
     graphData,
     (nodeId: string, _nodeType: string) => {
       notifyNodeClick();
-      updateScalePanel(nodeId, data, {
-        scaleNameEl: elements.scaleNameEl,
-        scaleNotesEl: elements.scaleNotesEl,
-        relatedScalesEl: elements.relatedScalesEl,
-      });
+      updateScalePanel(nodeId, data, panelElements);
       updateChordPanel(nodeId, data, elements.relatedChordsEl);
+    },
+    () => {
+      // Double-click background: clear selection
+      clearScalePanel(panelElements);
+      clearChordPanel(elements.relatedChordsEl);
     }
   );
 

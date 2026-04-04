@@ -26,23 +26,23 @@ interface KeyConfig {
 }
 
 /** White key dimensions. */
-const WHITE_KEY_WIDTH = 36;
-const WHITE_KEY_HEIGHT = 120;
+const WHITE_KEY_WIDTH = 28;
+const WHITE_KEY_HEIGHT = 60;
 
 /** Black key dimensions. */
-const BLACK_KEY_WIDTH = 22;
-const BLACK_KEY_HEIGHT = 75;
+const BLACK_KEY_WIDTH = 17;
+const BLACK_KEY_HEIGHT = 38;
 
 /** Which note indices (0-11) are black keys. */
 const BLACK_KEY_INDICES = new Set([1, 3, 6, 8, 10]); // C#, D#, F#, G#, A#
 
 /** Black key X offsets relative to the preceding white key's right edge. */
 const BLACK_KEY_OFFSETS: Record<number, number> = {
-  1: -14, // C# relative to C-D boundary
-  3: -8,  // D# relative to D-E boundary
-  6: -14, // F# relative to F-G boundary
-  8: -11, // G# relative to G-A boundary
-  10: -8, // A# relative to A-B boundary
+  1: -11, // C# relative to C-D boundary
+  3: -6,  // D# relative to D-E boundary
+  6: -11, // F# relative to F-G boundary
+  8: -9,  // G# relative to G-A boundary
+  10: -6, // A# relative to A-B boundary
 };
 
 /** Set of currently pressed keys (for visual state). */

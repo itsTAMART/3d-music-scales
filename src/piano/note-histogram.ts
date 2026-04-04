@@ -27,7 +27,7 @@ const TRIGGER_INCREMENT = 0.15;
 const DECAY_RATE = 0.5;
 
 /** Maximum bar height in pixels. */
-const MAX_BAR_HEIGHT = 50;
+const MAX_BAR_HEIGHT = 30;
 
 /** Intensity below this is considered zero. */
 const THRESHOLD = 0.01;
