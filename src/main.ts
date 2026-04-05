@@ -7,14 +7,14 @@
 import { loadAppData } from "./data/loader";
 import { buildUnifiedGraph, defaultLayers, type GraphLayers } from "./data/graph-builder";
 import { createLayout } from "./ui/layout";
-import { createGraph, updateGraphData, refreshLabels, resetCamera, type GraphInstance } from "./graph/graph";
+import { createGraph, updateGraphData, refreshLabels, resetCamera, flyToNode, type GraphInstance } from "./graph/graph";
 import { initCameraMotion, notifyNodeClick } from "./graph/camera-motion";
 import {
   triggerHighlights,
   startHighlightLoop,
 } from "./graph/highlight";
-import { updateScalePanel, clearScalePanel } from "./ui/scale-panel";
-import { updateChordPanel, clearChordPanel } from "./ui/chord-panel";
+import { initScalePanel, updateScalePanel, clearScalePanel } from "./ui/scale-panel";
+import { initChordPanel, updateChordPanel, clearChordPanel } from "./ui/chord-panel";
 import {
   createPiano,
   highlightPianoKey,
@@ -71,6 +71,16 @@ function init(): void {
       clearChordPanel(elements.relatedChordsEl);
     }
   );
+
+  // Initialize panels with navigation handler
+  const navigateToScale = (scaleId: string) => {
+    notifyNodeClick();
+    flyToNode(graph, scaleId);
+    updateScalePanel(scaleId, data, panelElements);
+    updateChordPanel(scaleId, data, elements.relatedChordsEl);
+  };
+  initScalePanel(panelElements, navigateToScale);
+  initChordPanel(elements.relatedChordsEl);
 
   startHighlightLoop(graph);
   initCameraMotion(graph, elements.graphContainer);

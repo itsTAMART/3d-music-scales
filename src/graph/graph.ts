@@ -328,6 +328,22 @@ export function resetCamera(graph: GraphInstance): void {
   graph.zoomToFit(1000, 50);
 }
 
+/** Flies the camera to a specific node by ID. */
+export function flyToNode(graph: GraphInstance, nodeId: string): void {
+  const nodes = graph.graphData().nodes as NodeObject[];
+  const node = nodes.find((n) => (n.id as string) === nodeId);
+  if (!node || node.x == null || node.y == null || node.z == null) return;
+
+  const distance = 40;
+  const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+
+  graph.cameraPosition(
+    { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+    { x: node.x, y: node.y, z: node.z },
+    2000
+  );
+}
+
 /** Configures OrbitControls. */
 function setupCameraControls(graph: GraphInstance): void {
   setTimeout(() => {

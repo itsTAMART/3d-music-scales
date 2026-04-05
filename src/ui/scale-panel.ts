@@ -1,21 +1,16 @@
 /**
  * Scale panel module — populates the left sidebar with scale info.
  *
- * When a scale node is clicked, this module updates the "This Scale"
- * section and the "Related Scales" list with sorted related scales.
+ * When a scale node is clicked, shows its name, notes, and related scales.
+ * Related scales are clickable to navigate to them. Panel re-renders
+ * when notation mode changes.
  *
  * @module ui/scale-panel
- *
- * @example
- * ```ts
- * import { updateScalePanel } from "@/ui/scale-panel";
- * updateScalePanel("C Major Scale", appData, elements);
- * ```
  */
 
 import type { AppData, ScaleLink } from "../types";
 import { getLinkNodeId } from "../music/note-utils";
-import { displayNote, displayScaleName } from "../music/notation";
+import { displayNote, displayScaleName, onNotationChange } from "../music/notation";
 
 /** DOM elements needed by the scale panel. */
 export interface ScalePanelElements {
@@ -24,11 +19,57 @@ export interface ScalePanelElements {
   relatedScalesEl: HTMLElement;
 }
 
+/** Callback for navigating to a scale (clicking a related item). */
+export type ScaleNavigateHandler = (scaleId: string) => void;
+
+/** Tracks current selection so we can re-render on notation change. */
+let currentScaleId: string | null = null;
+let currentData: AppData | null = null;
+let currentElements: ScalePanelElements | null = null;
+let currentNavigateHandler: ScaleNavigateHandler | null = null;
+
+/**
+ * Initializes the scale panel with notation change listener.
+ * Call once at startup.
+ */
+export function initScalePanel(
+  elements: ScalePanelElements,
+  onNavigate: ScaleNavigateHandler
+): void {
+  currentElements = elements;
+  currentNavigateHandler = onNavigate;
+
+  onNotationChange(() => {
+    if (currentScaleId && currentData && currentElements) {
+      renderPanel(currentScaleId, currentData, currentElements);
+    }
+  });
+}
+
 /**
  * Updates the scale panel with information about the selected scale.
- * Shows the scale name, its notes, and a sorted list of related scales.
  */
 export function updateScalePanel(
+  scaleId: string,
+  data: AppData,
+  elements: ScalePanelElements
+): void {
+  currentScaleId = scaleId;
+  currentData = data;
+  currentElements = elements;
+  renderPanel(scaleId, data, elements);
+}
+
+/** Clears the scale panel to its empty state. */
+export function clearScalePanel(elements: ScalePanelElements): void {
+  currentScaleId = null;
+  elements.scaleNameEl.textContent = "";
+  elements.scaleNotesEl.textContent = "";
+  elements.relatedScalesEl.innerHTML = "";
+}
+
+/** Renders the panel content. */
+function renderPanel(
   scaleId: string,
   data: AppData,
   elements: ScalePanelElements
@@ -36,7 +77,6 @@ export function updateScalePanel(
   const { scaleDict, scaleGraph } = data;
   const info = scaleDict[scaleId];
 
-  // Update scale name and notes (with notation conversion)
   elements.scaleNameEl.textContent = displayScaleName(scaleId);
 
   if (info) {
@@ -45,7 +85,6 @@ export function updateScalePanel(
     elements.scaleNotesEl.textContent = "";
   }
 
-  // Find and sort related scales
   const relatedLinks = scaleGraph.links.filter(
     (link) =>
       getLinkNodeId(link.source) === scaleId ||
@@ -59,22 +98,13 @@ export function updateScalePanel(
     }))
     .sort((a, b) => a.distance - b.distance);
 
-  // Render related scales list
   renderRelatedScales(elements.relatedScalesEl, related, scaleDict);
 }
 
-/** Clears the scale panel to its empty state. */
-export function clearScalePanel(elements: ScalePanelElements): void {
-  elements.scaleNameEl.textContent = "";
-  elements.scaleNotesEl.textContent = "";
-  elements.relatedScalesEl.innerHTML = "";
-}
-
-/** Renders an array of note names with highlighting. */
+/** Renders note names with highlighting. */
 function renderNotes(container: HTMLElement, notes: string[]): void {
   container.innerHTML = "";
-  const open = document.createTextNode("[");
-  container.appendChild(open);
+  container.appendChild(document.createTextNode("["));
 
   notes.forEach((note, i) => {
     const span = document.createElement("span");
@@ -94,7 +124,7 @@ interface RelatedScale {
   distance: number;
 }
 
-/** Renders the list of related scales. */
+/** Renders the list of related scales (clickable). */
 function renderRelatedScales(
   container: HTMLElement,
   scales: RelatedScale[],
@@ -114,6 +144,11 @@ function renderRelatedScales(
     const item = document.createElement("div");
     item.className = "related-item";
     item.dataset.scaleId = scale.name;
+
+    // Click to navigate to this scale
+    item.addEventListener("click", () => {
+      currentNavigateHandler?.(scale.name);
+    });
 
     const nameDiv = document.createElement("div");
     nameDiv.className = "item-name";
@@ -142,7 +177,7 @@ function renderRelatedScales(
   }
 }
 
-/** Gets the ID of the other node in a link (not the selected one). */
+/** Gets the other node ID in a link. */
 function getOtherNodeId(link: ScaleLink, selectedId: string): string {
   const sourceId = getLinkNodeId(link.source);
   return sourceId === selectedId ? getLinkNodeId(link.target) : sourceId;

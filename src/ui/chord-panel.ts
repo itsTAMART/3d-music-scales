@@ -1,62 +1,61 @@
 /**
  * Chord panel module — populates the right sidebar with related chords.
  *
- * When a scale is selected, this module finds all chords linked to that
- * scale and displays them in a grid layout.
+ * Re-renders when notation mode changes.
  *
  * @module ui/chord-panel
- *
- * @example
- * ```ts
- * import { updateChordPanel } from "@/ui/chord-panel";
- * updateChordPanel("C Major Scale", appData, chordContainer);
- * ```
  */
 
 import type { AppData } from "../types";
-import { displayNote, displayScaleName } from "../music/notation";
+import { displayNote, displayScaleName, onNotationChange } from "../music/notation";
+
+/** Tracks current state for re-rendering on notation change. */
+let currentScaleId: string | null = null;
+let currentData: AppData | null = null;
+let currentContainer: HTMLElement | null = null;
+
+/** Initialize notation change listener. Call once at startup. */
+export function initChordPanel(container: HTMLElement): void {
+  currentContainer = container;
+  onNotationChange(() => {
+    if (currentScaleId && currentData && currentContainer) {
+      renderPanel(currentScaleId, currentData, currentContainer);
+    }
+  });
+}
 
 /**
  * Updates the chord panel with chords related to the selected scale.
- * Chords are sorted by closeness (value field) and displayed in a 2-column grid.
  */
 export function updateChordPanel(
   scaleId: string,
   data: AppData,
   container: HTMLElement
 ): void {
+  currentScaleId = scaleId;
+  currentData = data;
+  currentContainer = container;
+  renderPanel(scaleId, data, container);
+}
+
+/** Clears the chord panel. */
+export function clearChordPanel(container: HTMLElement): void {
+  currentScaleId = null;
+  container.innerHTML = "";
+}
+
+function renderPanel(scaleId: string, data: AppData, container: HTMLElement): void {
   const { chordData, scaleDict } = data;
 
-  // Find chord links for this scale
   const chordLinks = chordData.links
     .filter((link) => link.source === scaleId || link.target === scaleId)
     .sort((a, b) => a.value - b.value);
 
-  // Get chord names (the side of the link that isn't the scale)
   const chords = chordLinks.map((link) => ({
     name: link.source === scaleId ? link.target : link.source,
     distance: link.value,
   }));
 
-  renderChords(container, chords, scaleDict);
-}
-
-/** Clears the chord panel. */
-export function clearChordPanel(container: HTMLElement): void {
-  container.innerHTML = "";
-}
-
-interface ChordEntry {
-  name: string;
-  distance: number;
-}
-
-/** Renders chord items into the grid container. */
-function renderChords(
-  container: HTMLElement,
-  chords: ChordEntry[],
-  scaleDict: AppData["scaleDict"]
-): void {
   container.innerHTML = "";
 
   if (chords.length === 0) {
