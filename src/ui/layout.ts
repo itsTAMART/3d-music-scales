@@ -64,16 +64,17 @@ export function createLayout(root: HTMLElement): LayoutElements {
   // Right panel
   const rightPanel = createElement("div", { id: "right-panel" });
 
-  const chordsBlock = createPanelBlock("RELATED CHORDS");
-  const relatedChordsEl = createElement("div", { className: "chord-grid" });
-  chordsBlock.appendChild(relatedChordsEl);
-  rightPanel.appendChild(chordsBlock);
-
-  // Controls block (MIDI + Audio)
+  // Controls block first (stays pinned at top)
   const controlsBlock = createPanelBlock("CONTROLS");
   const controlsEl = createElement("div", { className: "controls-list" });
   controlsBlock.appendChild(controlsEl);
   rightPanel.appendChild(controlsBlock);
+
+  // Related chords below (expands without pushing controls)
+  const chordsBlock = createPanelBlock("RELATED CHORDS");
+  const relatedChordsEl = createElement("div", { className: "chord-grid" });
+  chordsBlock.appendChild(relatedChordsEl);
+  rightPanel.appendChild(chordsBlock);
 
   root.appendChild(rightPanel);
 
