@@ -153,10 +153,9 @@ function init(): void {
 function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
   const matches = matchScales(activeNotes, data.scaleDict);
 
-  // Require almost all played notes to be in the scale (>= 80%)
-  // This means a scale only lights up when you're actually playing it
+  // Only illuminate when ALL played notes are in the scale (score === 1.0)
   const highlightIds = new Set(
-    matches.filter((m) => m.score >= 0.8).map((m) => m.scaleId)
+    matches.filter((m) => m.score === 1).map((m) => m.scaleId)
   );
 
   // Also highlight the note nodes themselves (always)

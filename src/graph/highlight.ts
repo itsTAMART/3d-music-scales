@@ -23,10 +23,10 @@ import type { GraphInstance } from "./graph";
 import type { NodeObject } from "three-forcegraph";
 
 /** How much brightness each trigger adds (0–1 scale). */
-const TRIGGER_INCREMENT = 0.25;
+const TRIGGER_INCREMENT = 0.5;
 
-/** Decay rate — brightness multiplied by this per second. ~3s to fade from 1→0.05 */
-const DECAY_RATE = 0.35;
+/** Decay rate — brightness multiplied by this per second. Slower decay for more punch. */
+const DECAY_RATE = 0.45;
 
 /** Brightness below this is considered "off". */
 const BRIGHTNESS_THRESHOLD = 0.02;
