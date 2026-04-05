@@ -215,7 +215,8 @@
 .audio-controls {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
   padding: 0.35rem 0;
 }
 
@@ -304,4 +305,72 @@
   border: 1px solid rgba(255, 196, 77, 0.2);
   padding: 0.1rem 0.35rem;
   margin-left: 0.25rem;
+}
+
+/* === Help Overlay === */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(3, 8, 16, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.help-content {
+  background: var(--color-panel-bg);
+  border: 1px solid var(--color-panel-border);
+  padding: 1.5rem 2rem;
+  max-width: 420px;
+  width: 90%;
+  cursor: default;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6), inset 0 0 20px var(--color-panel-glow);
+}
+
+.help-content h2 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(80, 180, 255, 0.08);
+}
+
+.help-section {
+  margin-bottom: 0.8rem;
+}
+
+.help-section h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: 0.3rem;
+}
+
+.help-section p {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.help-section b {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.help-close {
+  margin-top: 0.8rem;
+  width: 100%;
 }

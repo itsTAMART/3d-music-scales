@@ -103,6 +103,7 @@ function init(): void {
   createNotationToggle(elements.controlsEl, graph, data);
   createMIDIButton(elements.controlsEl);
   createAudioControls(elements.controlsEl);
+  createHelpButton(elements.controlsEl);
 
   // Note events
   document.addEventListener("piano:noteon", ((
@@ -266,6 +267,67 @@ function createResetCameraButton(
   wrapper.appendChild(button);
   wrapper.appendChild(hint);
   container.appendChild(wrapper);
+}
+
+/** Creates a help button that shows keyboard shortcuts and controls. */
+function createHelpButton(container: HTMLElement): void {
+  const wrapper = document.createElement("div");
+  wrapper.className = "midi-controls";
+
+  const btn = document.createElement("button");
+  btn.className = "midi-button";
+  btn.textContent = "? Help";
+  btn.addEventListener("click", () => toggleHelpOverlay());
+
+  wrapper.appendChild(btn);
+  container.appendChild(wrapper);
+}
+
+/** Toggles the help overlay. */
+function toggleHelpOverlay(): void {
+  let overlay = document.getElementById("help-overlay");
+  if (overlay) {
+    overlay.remove();
+    return;
+  }
+
+  overlay = document.createElement("div");
+  overlay.id = "help-overlay";
+  overlay.className = "help-overlay";
+  overlay.innerHTML = `
+    <div class="help-content">
+      <h2>Controls</h2>
+      <div class="help-section">
+        <h3>Navigation</h3>
+        <p><b>Drag</b> — Orbit camera</p>
+        <p><b>Scroll</b> — Zoom in/out</p>
+        <p><b>Right-drag</b> — Pan</p>
+        <p><b>Double-click background</b> — Reset camera &amp; deselect</p>
+        <p><b>Click node</b> — Select scale, fly to it</p>
+      </div>
+      <div class="help-section">
+        <h3>Piano Keyboard</h3>
+        <p><b>Lower octave</b> — A S D F G H J (white) · W E T Y U (black)</p>
+        <p><b>Upper octave</b> — K L ; ' Z X C (white) · O P [ ] \\ (black)</p>
+      </div>
+      <div class="help-section">
+        <h3>Features</h3>
+        <p><b>Chords / Notes</b> — Toggle graph layers</p>
+        <p><b>ABC / Do Re Mi</b> — Switch notation system</p>
+        <p><b>Connect MIDI</b> — Use a hardware MIDI controller</p>
+        <p><b>Upload Audio</b> — Analyze frequencies in an audio file</p>
+      </div>
+      <button class="midi-button help-close">Close</button>
+    </div>
+  `;
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay || (e.target as HTMLElement).classList.contains("help-close")) {
+      overlay!.remove();
+    }
+  });
+
+  document.body.appendChild(overlay);
 }
 
 // Run when DOM is ready
