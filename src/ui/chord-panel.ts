@@ -1,7 +1,6 @@
 /**
  * Chord panel module — populates the right sidebar with related chords.
- *
- * Re-renders when notation mode changes.
+ * Chords are clickable to navigate to them in the graph.
  *
  * @module ui/chord-panel
  */
@@ -9,14 +8,21 @@
 import type { AppData } from "../types";
 import { displayNote, displayScaleName, onNotationChange } from "../music/notation";
 
-/** Tracks current state for re-rendering on notation change. */
+/** Callback for navigating to a chord node. */
+export type ChordNavigateHandler = (chordId: string) => void;
+
 let currentScaleId: string | null = null;
 let currentData: AppData | null = null;
 let currentContainer: HTMLElement | null = null;
+let navigateHandler: ChordNavigateHandler | null = null;
 
-/** Initialize notation change listener. Call once at startup. */
-export function initChordPanel(container: HTMLElement): void {
+/** Initialize with notation change listener and navigate handler. */
+export function initChordPanel(
+  container: HTMLElement,
+  onNavigate: ChordNavigateHandler
+): void {
   currentContainer = container;
+  navigateHandler = onNavigate;
   onNotationChange(() => {
     if (currentScaleId && currentData && currentContainer) {
       renderPanel(currentScaleId, currentData, currentContainer);
@@ -24,9 +30,7 @@ export function initChordPanel(container: HTMLElement): void {
   });
 }
 
-/**
- * Updates the chord panel with chords related to the selected scale.
- */
+/** Updates the chord panel. */
 export function updateChordPanel(
   scaleId: string,
   data: AppData,
@@ -69,6 +73,11 @@ function renderPanel(scaleId: string, data: AppData, container: HTMLElement): vo
   for (const chord of chords) {
     const item = document.createElement("div");
     item.className = "chord-item";
+    item.style.cursor = "pointer";
+
+    item.addEventListener("click", () => {
+      navigateHandler?.(chord.name);
+    });
 
     const nameDiv = document.createElement("div");
     nameDiv.className = "item-name";

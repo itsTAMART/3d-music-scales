@@ -80,7 +80,7 @@ function init(): void {
     updateChordPanel(scaleId, data, elements.relatedChordsEl);
   };
   initScalePanel(panelElements, navigateToScale);
-  initChordPanel(elements.relatedChordsEl);
+  initChordPanel(elements.relatedChordsEl, navigateToScale);
 
   startHighlightLoop(graph);
   initCameraMotion(graph, elements.graphContainer);
