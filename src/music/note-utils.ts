@@ -97,6 +97,36 @@ export function matchScales(
 }
 
 /**
+ * Finds all scales/chords whose notes are ALL contained in the active notes.
+ * A chord/scale lights up only when every single note it contains is being played.
+ * Returns the IDs of matching entries.
+ */
+export function findFullyActiveEntries(
+  activeNotes: Set<NoteName>,
+  scaleDict: ScaleDict
+): string[] {
+  if (activeNotes.size === 0) return [];
+
+  const results: string[] = [];
+
+  for (const [id, info] of Object.entries(scaleDict)) {
+    const entryNotes = info.notes
+      .map((n) => normalizeNote(n))
+      .filter(Boolean) as NoteName[];
+
+    if (entryNotes.length === 0) continue;
+
+    // Check: are ALL notes of this entry currently active?
+    const allActive = entryNotes.every((n) => activeNotes.has(n));
+    if (allActive) {
+      results.push(id);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Extracts the note name (tonic) from a scale ID string.
  * e.g., "C Major Scale" -> "C", "F# Blues Scale" -> "F#"
  */

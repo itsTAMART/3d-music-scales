@@ -8,7 +8,7 @@ import { loadAppData } from "./data/loader";
 import { buildUnifiedGraph, defaultLayers, type GraphLayers } from "./data/graph-builder";
 import { createLayout } from "./ui/layout";
 import { createGraph, updateGraphData, refreshLabels, resetCamera, flyToNode, type GraphInstance } from "./graph/graph";
-import { initCameraMotion, notifyNodeClick } from "./graph/camera-motion";
+import { initCameraMotion, notifyNodeClick, setCameraMode, getCameraMode, type CameraMode } from "./graph/camera-motion";
 import {
   triggerHighlights,
   startHighlightLoop,
@@ -25,7 +25,7 @@ import { noteOn, noteOff } from "./piano/synth";
 import { createNoteHistogram, triggerNote } from "./piano/note-histogram";
 import { createMIDIButton } from "./audio/midi-input";
 import { createAudioControls } from "./audio/audio-analyzer";
-import { matchScales, normalizeNote } from "./music/note-utils";
+import { findFullyActiveEntries, normalizeNote } from "./music/note-utils";
 import { setNotation, onNotationChange, type NotationMode } from "./music/notation";
 import type { AppData, NoteName, NoteEventDetail } from "./types";
 
@@ -98,7 +98,7 @@ function init(): void {
   initKeyboardBindings();
 
   // Controls
-  createResetCameraButton(elements.controlsEl, graph);
+  createCameraControls(elements.controlsEl, graph);
   createLayerToggles(elements.controlsEl, graph, data);
   createNotationToggle(elements.controlsEl, graph, data);
   createMIDIButton(elements.controlsEl);
@@ -149,18 +149,24 @@ function init(): void {
   void rebuildGraph;
 }
 
-/** Matches active notes against scales/chords and triggers highlights. */
+/**
+ * Highlights nodes based on active notes:
+ * - Note nodes: light up immediately when played
+ * - Chords: light up only when ALL their notes are active
+ * - Scales: light up only when ALL their notes are active
+ */
 function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
-  const matches = matchScales(activeNotes, data.scaleDict);
+  const highlightIds = new Set<string>();
 
-  // Only illuminate when ALL played notes are in the scale (score === 1.0)
-  const highlightIds = new Set(
-    matches.filter((m) => m.score === 1).map((m) => m.scaleId)
-  );
-
-  // Also highlight the note nodes themselves (always)
+  // Note nodes always light up when played
   for (const note of activeNotes) {
     highlightIds.add(`♪ ${note}`);
+  }
+
+  // Scales and chords light up only when ALL their notes are currently active
+  const fullyActive = findFullyActiveEntries(activeNotes, data.scaleDict);
+  for (const id of fullyActive) {
+    highlightIds.add(id);
   }
 
   triggerHighlights(highlightIds);
@@ -243,28 +249,44 @@ function createToggleButton(
   return btn;
 }
 
-/** Creates a "Reset Camera" button. */
-function createResetCameraButton(
+/** Creates camera mode buttons: Orbit, Follow, Free, and Reset. */
+function createCameraControls(
   container: HTMLElement,
   graph: GraphInstance
 ): void {
   const wrapper = document.createElement("div");
   wrapper.className = "midi-controls";
 
-  const button = document.createElement("button");
-  button.className = "midi-button";
-  button.textContent = "Reset Camera";
-  button.addEventListener("click", () => {
+  const modes: Array<{ mode: CameraMode; label: string }> = [
+    { mode: "orbit", label: "Orbit" },
+    { mode: "follow", label: "Follow" },
+    { mode: "free", label: "Free" },
+  ];
+
+  const buttons: HTMLButtonElement[] = [];
+
+  for (const { mode, label } of modes) {
+    const btn = document.createElement("button");
+    btn.className = `midi-button ${getCameraMode() === mode ? "midi-button--active" : ""}`;
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      setCameraMode(mode);
+      for (const b of buttons) b.classList.remove("midi-button--active");
+      btn.classList.add("midi-button--active");
+    });
+    buttons.push(btn);
+    wrapper.appendChild(btn);
+  }
+
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "midi-button";
+  resetBtn.textContent = "Reset";
+  resetBtn.addEventListener("click", () => {
     notifyNodeClick();
     resetCamera(graph);
   });
+  wrapper.appendChild(resetBtn);
 
-  const hint = document.createElement("div");
-  hint.className = "midi-status";
-  hint.textContent = "Auto-orbits when idle · Follows music when playing";
-
-  wrapper.appendChild(button);
-  wrapper.appendChild(hint);
   container.appendChild(wrapper);
 }
 

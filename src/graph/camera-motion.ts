@@ -1,81 +1,50 @@
 /**
- * Camera motion module — cinematic auto-camera for idle and music modes.
+ * Camera motion module — manages three camera modes.
  *
- * **Idle mode**: When the user hasn't interacted, the camera slowly orbits
- * the graph center like a galaxy visualization — gentle, continuous rotation.
- *
- * **Music mode**: When notes are being played (highlights are active), the
- * camera drifts toward the brightness-weighted center-of-mass of the glowing
- * nodes. Movement is very slow (lerp ~0.008/frame) to avoid motion sickness.
- *
- * **User override**: Any mouse/touch/wheel interaction pauses auto-camera
- * for PAUSE_DURATION_MS, then it gently resumes. Node clicks also pause.
+ * - **Orbit**: Slowly orbits the graph center. Resumes after user inactivity.
+ * - **Follow**: Drifts toward the brightest highlighted node during playback.
+ * - **Free**: User has full manual control, no auto-movement.
  *
  * @module graph/camera-motion
- *
- * @example
- * ```ts
- * import { initCameraMotion } from "@/graph/camera-motion";
- * initCameraMotion(graph, graphContainer);
- * ```
  */
 
 import type { GraphInstance } from "./graph";
 import { getNodeBrightness, hasHighlights } from "./highlight";
 import type { NodeObject } from "three-forcegraph";
 
+export type CameraMode = "orbit" | "follow" | "free";
+
 /** How long to pause auto-camera after user interaction (ms). */
-const PAUSE_DURATION_MS = 8000;
+const PAUSE_DURATION_MS = 6000;
 
-/** Idle orbit: radians per second. One full rotation in ~90s. */
 const ORBIT_SPEED = (2 * Math.PI) / 90;
-
-/** Idle orbit radius — distance from center. */
 const ORBIT_RADIUS = 450;
-
-/** Idle orbit: slight vertical oscillation amplitude. */
 const ORBIT_Y_AMPLITUDE = 50;
-
-/** Idle orbit: vertical oscillation period in seconds. */
 const ORBIT_Y_PERIOD = 30;
-
-/** Music mode: how fast the camera lerps toward the target (per frame, 0–1). */
-const MUSIC_LERP_SPEED = 0.008;
-
-/** Music mode: distance from the focus point. */
-const MUSIC_DISTANCE = 150;
-
-/** Blend speed for transitioning between idle and music modes (per frame). */
-const MODE_BLEND_SPEED = 0.02;
+const FOLLOW_LERP = 0.008;
+const FOLLOW_DISTANCE = 150;
 
 interface CameraState {
   graph: GraphInstance;
   container: HTMLElement;
-  /** Timestamp of last user interaction. */
+  mode: CameraMode;
   lastInteraction: number;
-  /** Current orbit angle (radians). */
   orbitAngle: number;
-  /** Current camera position for smooth interpolation. */
   currentPos: { x: number; y: number; z: number };
-  /** Current lookAt target for smooth interpolation. */
   currentLookAt: { x: number; y: number; z: number };
-  /** Whether auto-camera is initialized (first positions set). */
   initialized: boolean;
-  /** Blend factor: 0 = idle orbit, 1 = music tracking. */
-  musicBlend: number;
-  /** Animation frame ID. */
   rafId: number | null;
-  /** Whether the loop is running. */
   running: boolean;
-  /** Last frame timestamp. */
   lastTime: number;
 }
 
 let state: CameraState | null = null;
 
+/** Listeners notified when mode changes. */
+const modeListeners: Array<(mode: CameraMode) => void> = [];
+
 /**
- * Initializes the cinematic auto-camera system.
- * Call once after the graph is created.
+ * Initializes the camera motion system. Call once after graph creation.
  */
 export function initCameraMotion(
   graph: GraphInstance,
@@ -84,18 +53,17 @@ export function initCameraMotion(
   state = {
     graph,
     container,
-    lastInteraction: 0, // Start in auto mode immediately
+    mode: "orbit",
+    lastInteraction: 0,
     orbitAngle: 0,
     currentPos: { x: 0, y: ORBIT_Y_AMPLITUDE, z: ORBIT_RADIUS },
     currentLookAt: { x: 0, y: 0, z: 0 },
     initialized: false,
-    musicBlend: 0,
     rafId: null,
     running: false,
     lastTime: 0,
   };
 
-  // Listen for user interactions to pause auto-camera
   const markInteraction = () => {
     if (state) state.lastInteraction = performance.now();
   };
@@ -104,22 +72,33 @@ export function initCameraMotion(
   container.addEventListener("wheel", markInteraction, { passive: true });
   container.addEventListener("touchstart", markInteraction, { passive: true });
 
-  // Start the animation loop
   state.running = true;
   state.lastTime = performance.now();
   state.rafId = requestAnimationFrame(tick);
 }
 
-/**
- * Notifies the camera that the user clicked a node (pauses auto-camera).
- */
+/** Sets the camera mode. */
+export function setCameraMode(mode: CameraMode): void {
+  if (state) state.mode = mode;
+  for (const fn of modeListeners) fn(mode);
+}
+
+/** Returns the current camera mode. */
+export function getCameraMode(): CameraMode {
+  return state?.mode ?? "orbit";
+}
+
+/** Registers a callback for mode changes. */
+export function onCameraModeChange(fn: (mode: CameraMode) => void): void {
+  modeListeners.push(fn);
+}
+
+/** Notifies the camera that the user clicked a node. */
 export function notifyNodeClick(): void {
   if (state) state.lastInteraction = performance.now();
 }
 
-/**
- * Stops the auto-camera system entirely.
- */
+/** Stops the camera system. */
 export function stopCameraMotion(): void {
   if (state) {
     state.running = false;
@@ -130,137 +109,110 @@ export function stopCameraMotion(): void {
   }
 }
 
-/** Main animation tick. */
 function tick(timestamp: number): void {
   if (!state || !state.running) return;
 
-  const dt = (timestamp - state.lastTime) / 1000;
+  const dt = Math.min((timestamp - state.lastTime) / 1000, 0.1);
   state.lastTime = timestamp;
 
-  // Clamp dt to avoid jumps after tab switches
-  const clampedDt = Math.min(dt, 0.1);
-
-  const timeSinceInteraction = timestamp - state.lastInteraction;
-  const isUserActive = timeSinceInteraction < PAUSE_DURATION_MS;
-
-  if (!isUserActive) {
-    updateAutoCamera(clampedDt, timestamp);
+  if (state.mode === "free") {
+    // No auto-movement
+  } else if (state.mode === "orbit") {
+    const timeSinceInteraction = timestamp - state.lastInteraction;
+    if (timeSinceInteraction > PAUSE_DURATION_MS) {
+      updateOrbit(dt, timestamp);
+    }
+  } else if (state.mode === "follow") {
+    const timeSinceInteraction = timestamp - state.lastInteraction;
+    if (timeSinceInteraction > PAUSE_DURATION_MS) {
+      if (hasHighlights()) {
+        updateFollow(dt);
+      } else {
+        updateOrbit(dt, timestamp);
+      }
+    }
   }
 
   state.rafId = requestAnimationFrame(tick);
 }
 
-/** Computes and applies auto-camera position. */
-function updateAutoCamera(dt: number, timestamp: number): void {
+function updateOrbit(dt: number, timestamp: number): void {
   if (!state) return;
 
-  const musicActive = hasHighlights();
-
-  // Blend between idle and music modes
-  const targetBlend = musicActive ? 1 : 0;
-  state.musicBlend += (targetBlend - state.musicBlend) * MODE_BLEND_SPEED;
-
-  // Compute idle orbit position
   state.orbitAngle += ORBIT_SPEED * dt;
-  const idlePos = {
+  const targetPos = {
     x: Math.cos(state.orbitAngle) * ORBIT_RADIUS,
     y: Math.sin(timestamp / 1000 / ORBIT_Y_PERIOD * 2 * Math.PI) * ORBIT_Y_AMPLITUDE,
     z: Math.sin(state.orbitAngle) * ORBIT_RADIUS,
   };
-  const idleLookAt = { x: 0, y: 0, z: 0 };
-
-  // Compute music focus position
-  const musicTarget = computeMusicTarget();
-  const musicPos = musicTarget
-    ? offsetFromTarget(musicTarget, MUSIC_DISTANCE, state.orbitAngle)
-    : idlePos;
-  const musicLookAt = musicTarget ?? idleLookAt;
-
-  // Blend the two modes
-  const blend = state.musicBlend;
-  const targetPos = {
-    x: lerp(idlePos.x, musicPos.x, blend),
-    y: lerp(idlePos.y, musicPos.y, blend),
-    z: lerp(idlePos.z, musicPos.z, blend),
-  };
-  const targetLookAt = {
-    x: lerp(idleLookAt.x, musicLookAt.x, blend),
-    y: lerp(idleLookAt.y, musicLookAt.y, blend),
-    z: lerp(idleLookAt.z, musicLookAt.z, blend),
-  };
-
-  // Smooth interpolation toward target (very gentle)
-  const lerpFactor = musicActive ? MUSIC_LERP_SPEED : 0.015;
+  const targetLookAt = { x: 0, y: 0, z: 0 };
 
   if (!state.initialized) {
     state.currentPos = { ...targetPos };
     state.currentLookAt = { ...targetLookAt };
     state.initialized = true;
   } else {
-    state.currentPos.x = lerp(state.currentPos.x, targetPos.x, lerpFactor);
-    state.currentPos.y = lerp(state.currentPos.y, targetPos.y, lerpFactor);
-    state.currentPos.z = lerp(state.currentPos.z, targetPos.z, lerpFactor);
-    state.currentLookAt.x = lerp(state.currentLookAt.x, targetLookAt.x, lerpFactor);
-    state.currentLookAt.y = lerp(state.currentLookAt.y, targetLookAt.y, lerpFactor);
-    state.currentLookAt.z = lerp(state.currentLookAt.z, targetLookAt.z, lerpFactor);
+    lerpVec(state.currentPos, targetPos, 0.015);
+    lerpVec(state.currentLookAt, targetLookAt, 0.015);
   }
 
-  // Apply — use instant (0ms) transition since we're animating per-frame
-  state.graph.cameraPosition(
-    state.currentPos,
-    state.currentLookAt,
-    0
-  );
+  state.graph.cameraPosition(state.currentPos, state.currentLookAt, 0);
 }
 
-/**
- * Finds the single brightest node and returns its position.
- * Avoids the center-of-mass problem where the target ends up in
- * empty space (e.g., the hole of a donut-shaped graph).
- */
-function computeMusicTarget(): { x: number; y: number; z: number } | null {
+function updateFollow(dt: number): void {
+  if (!state) return;
+
+  const target = findBrightestNode();
+  if (!target) return;
+
+  // Orbit slowly around the target
+  state.orbitAngle += ORBIT_SPEED * 0.3 * dt;
+  const targetPos = {
+    x: target.x + Math.cos(state.orbitAngle * 0.3) * FOLLOW_DISTANCE,
+    y: target.y + FOLLOW_DISTANCE * 0.3,
+    z: target.z + Math.sin(state.orbitAngle * 0.3) * FOLLOW_DISTANCE,
+  };
+
+  if (!state.initialized) {
+    state.currentPos = { ...targetPos };
+    state.currentLookAt = { ...target };
+    state.initialized = true;
+  } else {
+    lerpVec(state.currentPos, targetPos, FOLLOW_LERP);
+    lerpVec(state.currentLookAt, target, FOLLOW_LERP);
+  }
+
+  state.graph.cameraPosition(state.currentPos, state.currentLookAt, 0);
+}
+
+function findBrightestNode(): { x: number; y: number; z: number } | null {
   if (!state) return null;
 
   const brightness = getNodeBrightness();
   if (brightness.size === 0) return null;
 
   const nodes = state.graph.graphData().nodes as NodeObject[];
-
-  let bestNode: NodeObject | null = null;
-  let bestBrightness = 0;
+  let best: NodeObject | null = null;
+  let bestB = 0;
 
   for (const node of nodes) {
-    const id = String(node.id ?? "");
-    const b = brightness.get(id);
-    if (b != null && b > bestBrightness) {
-      bestBrightness = b;
-      bestNode = node;
+    const b = brightness.get(String(node.id ?? ""));
+    if (b != null && b > bestB) {
+      bestB = b;
+      best = node;
     }
   }
 
-  if (!bestNode || bestNode.x == null || bestNode.y == null || bestNode.z == null) {
-    return null;
-  }
-
-  return { x: bestNode.x, y: bestNode.y, z: bestNode.z };
+  if (!best || best.x == null || best.y == null || best.z == null) return null;
+  return { x: best.x, y: best.y, z: best.z };
 }
 
-/**
- * Computes a camera position offset from a target point,
- * maintaining a consistent distance with slight orbit.
- */
-function offsetFromTarget(
+function lerpVec(
+  current: { x: number; y: number; z: number },
   target: { x: number; y: number; z: number },
-  distance: number,
-  angle: number
-): { x: number; y: number; z: number } {
-  return {
-    x: target.x + Math.cos(angle * 0.3) * distance,
-    y: target.y + distance * 0.3,
-    z: target.z + Math.sin(angle * 0.3) * distance,
-  };
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
+  t: number
+): void {
+  current.x += (target.x - current.x) * t;
+  current.y += (target.y - current.y) * t;
+  current.z += (target.z - current.z) * t;
 }
