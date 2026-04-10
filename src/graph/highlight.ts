@@ -194,23 +194,30 @@ function applyVisuals(graph: GraphInstance): void {
 
     if (state && state.brightness > BRIGHTNESS_THRESHOLD) {
       const b = state.brightness;
+      const nodeType = (userData?.nodeType as string) ?? "scale";
       userData._highlightActive = true;
 
-      // Label: visible regardless of distance during highlight
+      // Per-type highlight multipliers: scales shine most, chords less, notes subtle
+      const coreMult = nodeType === "scale" ? 4.0 : nodeType === "chord" ? 2.5 : 1.5;
+      const glowMult = nodeType === "scale" ? 30 : nodeType === "chord" ? 18 : 12;
+      const glowBase = nodeType === "scale" ? 10 : nodeType === "chord" ? 4 : 6;
+      const labelOpacity = nodeType === "scale" ? 0.6 + 0.4 * b : nodeType === "chord" ? 0.4 + 0.6 * b : 0.5 + 0.5 * b;
+
+      // Label: bright and fully visible when active
       if (sprite) {
         sprite.color = lerpColor(originalColor, "#ffffff", b);
-        if (sprite.material) sprite.material.opacity = 0.5 + 0.5 * b;
+        if (sprite.material) sprite.material.opacity = labelOpacity;
       }
-      // Core grows — bloom amplifies the bigger bright surface
+      // Core grows aggressively for scales
       if (core) {
-        if (core.scale) core.scale.setScalar(1 + b * 2.5);
-        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", b * 0.9));
+        if (core.scale) core.scale.setScalar(1 + b * coreMult);
+        if (core.material?.color) core.material.color.setStyle(lerpColor(originalColor, "#ffffff", b * 0.95));
       }
-      // Halo expands and intensifies
+      // Halo expands — scales get massive bloom
       if (glow) {
-        const s = 8 + b * 18;
+        const s = glowBase + b * glowMult;
         if (glow.scale) glow.scale.set(s, s, 1);
-        if (glow.material) glow.material.opacity = 0.4 + b * 0.5;
+        if (glow.material) glow.material.opacity = 0.5 + b * 0.5;
       }
     } else if (anyHighlighted) {
       // Dimmed: tiny faint star
