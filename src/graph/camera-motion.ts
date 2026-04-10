@@ -14,9 +14,6 @@ import type { NodeObject } from "three-forcegraph";
 
 export type CameraMode = "orbit" | "follow" | "free";
 
-/** How long to pause auto-camera after user interaction (ms). */
-const PAUSE_DURATION_MS = 6000;
-
 const ORBIT_SPEED = (2 * Math.PI) / 90;
 const ORBIT_RADIUS = 450;
 const ORBIT_Y_AMPLITUDE = 50;
@@ -28,7 +25,6 @@ interface CameraState {
   graph: GraphInstance;
   container: HTMLElement;
   mode: CameraMode;
-  lastInteraction: number;
   orbitAngle: number;
   currentPos: { x: number; y: number; z: number };
   currentLookAt: { x: number; y: number; z: number };
@@ -39,6 +35,9 @@ interface CameraState {
 }
 
 let state: CameraState | null = null;
+
+/** Fallback mode when state isn't initialized yet. */
+let pendingMode: CameraMode = "orbit";
 
 /** Listeners notified when mode changes. */
 const modeListeners: Array<(mode: CameraMode) => void> = [];
@@ -53,8 +52,7 @@ export function initCameraMotion(
   state = {
     graph,
     container,
-    mode: "orbit",
-    lastInteraction: 0,
+    mode: pendingMode,
     orbitAngle: 0,
     currentPos: { x: 0, y: ORBIT_Y_AMPLITUDE, z: ORBIT_RADIUS },
     currentLookAt: { x: 0, y: 0, z: 0 },
@@ -64,14 +62,6 @@ export function initCameraMotion(
     lastTime: 0,
   };
 
-  const markInteraction = () => {
-    if (state) state.lastInteraction = performance.now();
-  };
-
-  container.addEventListener("mousedown", markInteraction);
-  container.addEventListener("wheel", markInteraction, { passive: true });
-  container.addEventListener("touchstart", markInteraction, { passive: true });
-
   state.running = true;
   state.lastTime = performance.now();
   state.rafId = requestAnimationFrame(tick);
@@ -79,23 +69,19 @@ export function initCameraMotion(
 
 /** Sets the camera mode. */
 export function setCameraMode(mode: CameraMode): void {
+  pendingMode = mode;
   if (state) state.mode = mode;
   for (const fn of modeListeners) fn(mode);
 }
 
 /** Returns the current camera mode. */
 export function getCameraMode(): CameraMode {
-  return state?.mode ?? "orbit";
+  return state?.mode ?? pendingMode;
 }
 
 /** Registers a callback for mode changes. */
 export function onCameraModeChange(fn: (mode: CameraMode) => void): void {
   modeListeners.push(fn);
-}
-
-/** Notifies the camera that the user clicked a node. */
-export function notifyNodeClick(): void {
-  if (state) state.lastInteraction = performance.now();
 }
 
 /** Stops the camera system. */
@@ -116,20 +102,15 @@ function tick(timestamp: number): void {
   state.lastTime = timestamp;
 
   if (state.mode === "free") {
-    // No auto-movement
+    // No auto-movement — user has full control
   } else if (state.mode === "orbit") {
-    const timeSinceInteraction = timestamp - state.lastInteraction;
-    if (timeSinceInteraction > PAUSE_DURATION_MS) {
-      updateOrbit(dt, timestamp);
-    }
+    updateOrbit(dt, timestamp);
   } else if (state.mode === "follow") {
-    const timeSinceInteraction = timestamp - state.lastInteraction;
-    if (timeSinceInteraction > PAUSE_DURATION_MS) {
-      if (hasHighlights()) {
-        updateFollow(dt);
-      } else {
-        updateOrbit(dt, timestamp);
-      }
+    if (hasHighlights()) {
+      updateFollow(dt);
+    } else {
+      // Nothing highlighted — orbit as fallback
+      updateOrbit(dt, timestamp);
     }
   }
 

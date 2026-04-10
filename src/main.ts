@@ -8,7 +8,7 @@ import { loadAppData } from "./data/loader";
 import { buildUnifiedGraph, defaultLayers, type GraphLayers } from "./data/graph-builder";
 import { createLayout } from "./ui/layout";
 import { createGraph, updateGraphData, refreshLabels, resetCamera, flyToNode, type GraphInstance } from "./graph/graph";
-import { initCameraMotion, notifyNodeClick, setCameraMode, getCameraMode, type CameraMode } from "./graph/camera-motion";
+import { initCameraMotion, setCameraMode, getCameraMode, type CameraMode } from "./graph/camera-motion";
 import {
   triggerHighlights,
   startHighlightLoop,
@@ -61,7 +61,6 @@ function init(): void {
     elements.graphContainer,
     graphData,
     (nodeId: string, _nodeType: string) => {
-      notifyNodeClick();
       updateScalePanel(nodeId, data, panelElements);
       updateChordPanel(nodeId, data, elements.relatedChordsEl);
     },
@@ -74,7 +73,6 @@ function init(): void {
 
   // Initialize panels with navigation handler
   const navigateToScale = (scaleId: string) => {
-    notifyNodeClick();
     flyToNode(graph, scaleId);
     updateScalePanel(scaleId, data, panelElements);
     updateChordPanel(scaleId, data, elements.relatedChordsEl);
@@ -282,7 +280,6 @@ function createCameraControls(
   resetBtn.className = "midi-button";
   resetBtn.textContent = "Reset";
   resetBtn.addEventListener("click", () => {
-    notifyNodeClick();
     resetCamera(graph);
   });
   wrapper.appendChild(resetBtn);
