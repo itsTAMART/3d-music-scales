@@ -33,8 +33,16 @@ import "./styles/main.css";
 import "./styles/panels.css";
 import "./styles/typography.css";
 
-/** Currently active notes from any input source. */
+/** Currently held notes (for piano key visual state). */
 const activeNotes = new Set<NoteName>();
+
+/**
+ * Recently played notes with timestamps. Notes linger for RECENT_WINDOW_MS
+ * after being played, so sequential notes (e.g., C then E then G) can
+ * still trigger a chord/scale even if they're not all held simultaneously.
+ */
+const recentNotes = new Map<NoteName, number>();
+const RECENT_WINDOW_MS = 2000;
 
 /** Current graph layers state. */
 const layers: GraphLayers = defaultLayers();
@@ -111,6 +119,7 @@ function init(): void {
     if (!note) return;
 
     activeNotes.add(note);
+    recentNotes.set(note, performance.now());
     highlightPianoKey(pianoSvg, note, true);
     triggerNote(note);
 
@@ -132,9 +141,9 @@ function init(): void {
 
     if (activeNotes.size === 0) {
       clearPianoHighlights(pianoSvg);
-    } else {
-      updateNoteHighlights(graph, data);
     }
+    // Don't remove from recentNotes — let the window expire naturally
+    updateNoteHighlights(graph, data);
   }) as EventListener);
 
   /** Rebuild graph when layers change. */
@@ -148,21 +157,36 @@ function init(): void {
 }
 
 /**
- * Highlights nodes based on active notes:
+ * Highlights nodes based on notes:
  * - Note nodes: light up immediately when played
- * - Chords: light up only when ALL their notes are active
- * - Scales: light up only when ALL their notes are active
+ * - Chords/Scales: light up when ALL their notes were played recently
+ *   (within RECENT_WINDOW_MS), even if not held simultaneously
  */
 function updateNoteHighlights(graph: GraphInstance, data: AppData): void {
   const highlightIds = new Set<string>();
+  const now = performance.now();
 
-  // Note nodes always light up when played
+  // Prune expired notes from the recent window
+  for (const [note, timestamp] of recentNotes) {
+    if (now - timestamp > RECENT_WINDOW_MS) {
+      recentNotes.delete(note);
+    }
+  }
+
+  // Build the set of recently active notes
+  const recent = new Set<NoteName>(recentNotes.keys());
+
+  // Note nodes light up for currently held notes
   for (const note of activeNotes) {
     highlightIds.add(`♪ ${note}`);
   }
+  // Also light up recently played notes (fading)
+  for (const note of recent) {
+    highlightIds.add(`♪ ${note}`);
+  }
 
-  // Scales and chords light up only when ALL their notes are currently active
-  const fullyActive = findFullyActiveEntries(activeNotes, data.scaleDict);
+  // Scales and chords: ALL their notes must be in the recent window
+  const fullyActive = findFullyActiveEntries(recent, data.scaleDict);
   for (const id of fullyActive) {
     highlightIds.add(id);
   }
