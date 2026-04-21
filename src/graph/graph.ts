@@ -232,7 +232,13 @@ export function createGraph(
     if (node.z == null) node.z = (Math.random() - 0.5) * 200;
   }
 
-  graph.d3ReheatSimulation();
+  // Do NOT call d3ReheatSimulation() here. It sets engineRunning=true but
+  // doesn't initialize state.layout — that only happens in the kapsule
+  // digest (debounced 1ms after graphData(...) is called). If the next
+  // rAF fires in that window, tickFrame calls state.layout.tick() on
+  // undefined; since _animationCycle schedules the next rAF only after
+  // tickFrame returns, the whole animation loop dies permanently.
+  // The digest will start the simulation on its own.
 
   // Distance-based label fading
   graph.onEngineTick(() => {
@@ -273,12 +279,18 @@ export function createGraph(
   setupCameraControls(graph);
   setupBloom(graph);
 
-  // Fix first-load: force a resize after the container gets its final layout
-  requestAnimationFrame(() => {
+  // Keep the graph sized to the container across all layout shifts:
+  // initial paint, late-loading fonts/stylesheets, and window resizes.
+  const resize = () => {
     const w = container.clientWidth || window.innerWidth;
     const h = container.clientHeight || window.innerHeight;
     graph.width(w).height(h);
-  });
+  };
+  resize();
+  requestAnimationFrame(resize);
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(container);
+  window.addEventListener("resize", resize);
 
   return graph;
 }

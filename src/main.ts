@@ -359,6 +359,9 @@ function toggleHelpOverlay(): void {
         <p><b>Connect MIDI</b> — Use a hardware MIDI controller</p>
         <p><b>Upload Audio</b> — Analyze frequencies in an audio file</p>
       </div>
+      <div class="help-section">
+        <p><a href="https://github.com/itsTAMART/3d-music-scales" target="_blank" rel="noopener noreferrer">View on GitHub</a></p>
+      </div>
       <button class="midi-button help-close">Close</button>
     </div>
   `;
